@@ -22,7 +22,7 @@ O PetVida atende à necessidade primária de centralizar, simplificar e tornar a
 
 
 ## 3. Contexto de Uso
-O aplicativo será operado em ambientes dinâmicos e por vezes caóticos, como clínicas veterinárias, pet shops, feiras de adoção e campanhas públicas de vacinação.
+O aplicativo será operado em ambientes dinâmicos e por vezes caóticos, como **clínicas veterinárias, pet shops, feiras de adoção e campanhas públicas de vacinação.**
 
 * **Conectividade:** Frequentemente utilizado em locais sem sinal de internet ou com cobertura instável. *Implicação:* Exige operação **offline-first**, garantindo leitura e gravação da carteira localmente, reservando a internet apenas para backup/sincronização via Firebase em conexões Wi-Fi.
 * **Nível de Atenção e Urgência:** O tutor ou veterinário pode estar segurando o pet ou enfrentando uma situação de mal-estar do animal. *Implicação:* Necessidade de botões grandes, telas coloridas e de rápida interpretação visual. A funcionalidade principal de adicionar vacina deve exigir no máximo **3 interações** (Abrir > Tocar no pet > Tocar em "Adicionar Vacina").
@@ -62,6 +62,7 @@ O **PetVida** pretende oferecer uma carteira de vacinação e monitoramento de s
 * **Sistema Operacional:** Suporte a Android 8.0 ou superior .
 * **Conectividade:** A carteira deve funcionar sem internet . Sincronização com o Firebase permitida somente em Wi-Fi .
 * **Privacidade e Proteção de Dados:** Como os dados do pet podem revelar a identidade do tutor, o app deve oferecer **Modo Anônimo** e **Exclusão Total dos Dados** a qualquer momento .
+*  **Acessibilidade e Usabilidade:** O aplicativo deve ser projetado para uso rápido e prático em **ambientes ruidosos ou caóticos** (como clínicas, feiras e pet shops). Para atender a diferentes perfis de tutores e situações de mobilidade reduzida/atenção dividida, a interface deve contar com **botões grandes**, **elementos com alto contraste**, **visualização clara** e **feedback visual imediato** em formulários e estados de carregamento.
 * **Recursos do Dispositivo:** Integração restrita e pontual com a Galeria de Fotos (`ImagePicker`) e Serviços de Mapas (`Google Maps`) .
 
 
