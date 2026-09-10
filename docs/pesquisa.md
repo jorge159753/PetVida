@@ -1,110 +1,109 @@
-Pesquisa — PetVida
+# Pesquisa de Mercado e Usuários — PetVida
 
-1. O problema
+Este documento apresenta a fundamentação teórica, análise de contexto, dados estatísticos e os principais insights obtidos para o desenvolvimento da plataforma **PetVida**, focada no gerenciamento da saúde animal e guarda responsável.
 
-O PetVida foi pensado para ajudar tutores a cuidar melhor da saúde dos seus cães e gatos. Um dos principais problemas é que informações como datas de vacinação, vermifugação e outros cuidados podem acabar sendo esquecidas ou ficar espalhadas em diferentes lugares.
+---
 
-Isso pode parecer um problema simples, mas o cuidado com os animais também está relacionado à saúde pública. A vacinação de cães e gatos é uma das principais formas de prevenção da raiva. Segundo o Ministério da Saúde, a cobertura da campanha de vacinação antirrábica no Brasil foi de 78% em 2025. O próprio Ministério destaca que manter uma boa cobertura de vacinação continua sendo importante para evitar a circulação da doença. (Serviços e Informações do Brasil)
+## 1. O Problema
 
-O problema também se relaciona à guarda responsável. O Conselho Federal de Medicina Veterinária explica que a guarda responsável envolve assumir os cuidados necessários para o bem-estar e a saúde do animal, além de evitar riscos para outras pessoas, animais e para o meio ambiente. O abandono, por outro lado, pode contribuir para problemas de saúde pública e para a ocorrência de zoonoses. (Conselho Federal de Medicina Veterinária)
+O **PetVida** foi idealizado para auxiliar tutores no acompanhamento contínuo e na gestão da saúde de cães e gatos. Um dos gargalos mais recorrentes identificados é a perda ou dispersão de dados essenciais — como histórico de vacinação, aplicação de vermífugos, exames e consultas médicas — em múltiplos locais e papéis fáceis de perder.
 
-Por isso, a principal necessidade que o PetVida procura atender é tornar o acompanhamento desses cuidados mais simples e organizado, ajudando o tutor a não depender apenas da memória para cuidar do animal.
+Apesar de parecer uma questão meramente organizacional, o acompanhamento veterinário interfere diretamente na **saúde pública**:
 
-2. Público e usuários
+* **Prevenção da Raiva e Zoonoses:** A vacinação regular de animais domésticos é o principal pilar de contenção da raiva. Dados do Ministério da Saúde apontam que a cobertura da campanha antirrábica no Brasil atingiu **78% em 2025**, enfatizando a importância de manter altos índices vacinais para evitar a recirculação do vírus.
+* **Guarda Responsável x Abandono:** O Conselho Federal de Medicina Veterinária (CFMV) ratifica que a guarda responsável exige prover condições adequadas de saúde, nutrição e bem-estar, minimizando riscos à sociedade e ao meio ambiente. O abandono e a falta de controle preventivo agravam problemas socioambientais e favorecem o surto de zoonoses.
 
-O principal usuário do aplicativo é o tutor de cães ou gatos. Esse usuário pode ter diferentes formas de lidar com a saúde do animal.
+Assim, o PetVida visa **descentralizar a dependência da memória humana**, provendo uma ferramenta ágil, intuitiva e estruturada para acompanhamento preventivo.
 
-Alguns tutores acompanham de perto todas as vacinas e consultas e podem usar o aplicativo principalmente para manter o histórico organizado. Outros podem ter uma rotina mais corrida e acabar esquecendo datas importantes. Para esse segundo grupo, os lembretes são especialmente importantes.
+---
 
-Também existe a situação de pessoas que acabaram de adotar um animal e ainda não possuem todas as informações sobre ele. Um cadastro simples pode facilitar esse primeiro contato com o aplicativo.
+## 2. Público e Usuários
 
-Além dos tutores, o projeto considera ONGs e protetores de animais, veterinários e agentes de zoonoses. Para esses usuários ou parceiros, o histórico do pet pode ser útil principalmente durante adoções, consultas e campanhas.
+O sistema engloba perfis com dinâmicas e necessidades distintas:
 
-Assim, o PetVida pode ser usado tanto no dia a dia, para acompanhar a saúde do animal, quanto em situações específicas, como uma consulta veterinária ou uma campanha de vacinação.
+### 2.1. Tutores
+* **Tutores Engajados / Preventivos:** Acompanham rigorosamente os prazos e utilizam a plataforma principalmente para centralização do histórico médico e controle preventivo.
+* **Tutores Ocupados / Desorganizados:** Possuem rotinas intensas e dependem fortemente de automações, alertas e notificações ativas para evitar atrasos em doses e retornos.
+* **Tutores de Primeira Viagem / Recém-Adotantes:** Necessitam de orientações simplificadas e facilidade no onboarding para cadastrar um pet sem histórico prévio estruturado.
 
-3. Contexto de uso
+### 2.2. Parceiros e Ecossistema
+* **ONGs e Protetores Independente:** Agilidade na transferência do histórico de saúde durante feiras e processos de adoção.
+* **Veterinários e Clínicas:** Agilidade no diagnóstico ao consultar diários de sintomas e carteiras vacinais prévias.
+* **Agentes de Zoonoses:** Suporte na comprovação vacinal em ações comunitárias e de fiscalização.
 
-O aplicativo não será utilizado somente em casa. O estudo de caso prevê situações como clínicas veterinárias, pet shops e feiras de adoção.
+---
 
-Nesses locais, o usuário pode estar com pouca atenção disponível ou precisar consultar uma informação rapidamente. Por isso, a interface precisa ser simples e deixar as informações principais fáceis de encontrar.
+## 3. Contexto de Uso e Requisitos Operacionais
 
-Outro ponto importante é a conexão com a internet. Uma carteira de vacinação não deveria deixar de funcionar justamente quando o tutor está em uma clínica ou campanha com sinal ruim. Por esse motivo, o estudo de caso determina que a carteira possa ser acessada sem internet.
+O aplicativo foi projetado para operar em cenários adversos de mobilidade e conectividade:
 
-Isso também significa que o aplicativo precisa priorizar as informações essenciais no próprio aparelho e não depender de uma conexão constante para as funções mais importantes.
+* **Ambientes de Uso:** Clínicas veterinárias, pet shops, feiras de adoção e postos volantes de vacinação.
+* **Design Centrado na Agilidade:** Interfaces limpas, de alta legibilidade e acesso direto às informações críticas em poucos toques.
+* **Acesso Offline (*Offline-First*):** A carteira sanitária e os registros essenciais do pet ficam armazenados no próprio dispositivo local, garantindo que a ausência de sinal de internet em clínicas ou campanhas de rua não impeça a consulta dos dados.
 
-4. O que o aplicativo pretende oferecer
+---
 
-A proposta do PetVida é funcionar como uma espécie de carteira de saúde do animal no celular.
+## 4. Proposta de Valor do Aplicativo
 
-A ideia é reunir em um só lugar informações que o tutor normalmente precisa guardar ou lembrar, como vacinas, vermifugação e sintomas. O aplicativo também pretende facilitar a localização de clínicas públicas e campanhas de castração.
+O PetVida atua como uma **carteira digital completa de saúde animal**, oferecendo:
 
-Na prática, o principal benefício para o usuário é ter mais controle sobre os cuidados do animal. Os lembretes ajudam a evitar esquecimentos, enquanto o histórico facilita a apresentação das informações ao veterinário.
+1. **Centralização de Histórico:** Vacinas, vermifugação, exames e diário de sintomas em um único local.
+2. **Alertas e Notificações Inteligentes:** Lembretes automatizados para evitar o esquecimento de prazos epidemiológicos.
+3. **Mapeamento de Serviços:** Geolocalização de clínicas públicas, postos de saúde animal e campanhas de castração/vacinação.
+4. **Fomento à Guarda Responsável:** Alinhamento às diretrizes do CRMV-SP para promoção do bem-estar e controle populacional.
 
-A proposta também está ligada à guarda responsável. O CRMV-SP destaca que a guarda responsável inclui cuidados como vacinação, controle de parasitas e acompanhamento veterinário, além de apontar que o abandono pode trazer consequências para a saúde pública. (CRMV-SP)
+---
 
-5. Necessidades encontradas
+## 5. Levantamento de Necessidades (Requirements)
 
-A pesquisa e o estudo de caso apontam algumas necessidades que devem ser consideradas no desenvolvimento:
+A partir das pesquisas de campo e análise do estudo de caso, foram elencadas as seguintes necessidades funcionais:
 
-* organizar as informações de saúde do pet;
-* lembrar o tutor das próximas vacinas;
-* acompanhar a vermifugação;
-* registrar sintomas que possam ser importantes posteriormente;
-* ter acesso ao histórico durante uma consulta;
-* encontrar serviços públicos e campanhas;
-* conseguir consultar a carteira sem internet;
-* facilitar o cuidado mesmo para quem possui pouco tempo para acompanhar o aplicativo;
-* permitir que o usuário tenha controle sobre os dados cadastrados.
+* [x] Organização estruturada do histórico de saúde do pet
+* [x] Sistema de lembretes e notificações para ciclo vacinal
+* [x] Cronograma e alertas para aplicação de vermífugos e antipulgas
+* [x] Registro pontual em diário de sintomas para apoio a diagnósticos futuros
+* [x] Rápida visualização do histórico durante consultas presenciais
+* [x] Mapeamento e consulta a serviços públicos e campanhas comunitárias
+* [x] Armazenamento e consulta da carteira de vacinação em modo *offline*
+* [x] Experiência de uso fluida para tutores com pouco tempo disponível
+* [x] Controle total do usuário sobre a privacidade e propriedade dos dados salvos
 
-Essas necessidades mostram que o aplicativo precisa ser mais do que um cadastro. Ele deve ajudar o tutor a manter uma rotina de cuidados.
+---
 
-6. Dados encontrados na pesquisa
+## 6. Dados Estatísticos da Pesquisa
 
-Os dados do IBGE ajudam a mostrar o tamanho do público que pode ser afetado por esse tipo de problema. Em 2019, havia pelo menos um cachorro em 46,1% dos domicílios brasileiros, o equivalente a aproximadamente 33,8 milhões de domicílios. Os gatos estavam presentes em 19,3% dos domicílios, cerca de 14,1 milhões. (Agência de Notícias IBGE)
+De acordo com levantamentos da Pesquisa Nacional de Saúde (PNS / IBGE) e dados governamentais:
 
-A mesma pesquisa mostrou que, entre os domicílios que tinham cães ou gatos, 72% tinham todos os animais vacinados contra a raiva nos 12 meses anteriores à pesquisa. Em 2013, esse percentual era de 75,4%. Na Região Nordeste, o percentual de domicílios em que todos os cães e gatos haviam sido vacinados era de 67,3%. (IBGE)
+| Indicador | Dado Estatístico | Fonte |
+| :--- | :--- | :--- |
+| **Presença de Cães nos Domicílios** | 46,1% (~33,8 milhões de lares) | IBGE (2019) |
+| **Presença de Gatos nos Domicílios** | 19,3% (~14,1 milhões de lares) | IBGE (2019) |
+| **Taxa Nacional de Vacinação Antirrábica** | 72,0% dos lares com pets vacinados | IBGE (2019) |
+| **Taxa de Vacinação Antirrábica (Região Nordeste)** | 67,3% dos lares com pets vacinados | IBGE (2019) |
+| **Cobertura da Campanha Antirrábica** | 78,0% de alcance nacional | Min. da Saúde (2025) |
 
-Esses números não significam que a falta de vacinação seja causada somente pelo esquecimento. Existem outros fatores envolvidos. Porém, eles mostram que ainda existe espaço para melhorar o acompanhamento da vacinação, principalmente em regiões onde a cobertura foi menor.
+---
 
-O Ministério da Saúde também destaca que manter cães e gatos vacinados é uma das medidas para reduzir o risco de zoonoses. (Serviços e Informações do Brasil)
+## 7. Principais Descobertas (*Key Insights*)
 
-7. Relação da pesquisa com o aplicativo
+### Insight 1: A vacinação animal é um pilar direto de Saúde Pública
+* **Achado:** A imunização de cães e gatos não beneficia apenas o indivíduo, mas impede a circulação de zoonoses letais como a raiva humana.
+* **Impacto no Projeto:** A carteira sanitária e o módulo de vacinas recebem prioridade máxima na navegação (*core feature*).
 
-Os resultados encontrados ajudam a justificar algumas das funções previstas para o PetVida.
+### Insight 2: Lacunas vacinais podem ser mitigadas por automação
+* **Achado:** A taxa de vacinação plena nos lares caiu de 75,4% (2013) para 72% (2019), apresentando queda acentuada em regiões específicas.
+* **Impacto no Projeto:** Implementação de alertas preventivos configurados por padrão para **7 dias antes do vencimento** da dose, permitindo planejamento do tutor.
 
-A carteira de vacinação atende à necessidade de manter o histórico organizado. Os lembretes ajudam principalmente os tutores que esquecem datas. O diário de sintomas permite guardar informações que podem ser úteis em uma consulta. Já o mapa de clínicas e campanhas pode facilitar o acesso a serviços de saúde animal.
+### Insight 3: Guarda responsável exige suporte à rotina contínua
+* **Achado:** O CRMV-SP e CFMV destacam que a posse responsável envolve prevenções constantes (parasitas, higiene, alimentação e exames).
+* **Impacto no Projeto:** O ecossistema estende-se além de vacinas, integrando calendário parasitário, diário de sintomas e guia de serviços locais.
 
-O funcionamento offline também tem relação direta com o contexto de uso. Como o aplicativo pode ser utilizado em campanhas, feiras e clínicas, o acesso às informações principais não deve depender da internet.
+---
 
-8. Três descobertas importantes
+## 8. Referências e Fontes Consultadas
 
-1. A vacinação dos pets também tem importância para a saúde pública
-
-A pesquisa mostrou que a vacinação de cães e gatos não é apenas uma questão de cuidado individual. A vacinação é uma das principais medidas utilizadas para controlar a raiva, uma doença que também pode afetar seres humanos. (Serviços e Informações do Brasil)
-
-Como isso influencia o projeto:
-A carteira de vacinação e os lembretes devem ser algumas das partes mais importantes do PetVida. O aplicativo precisa facilitar ao máximo o acompanhamento das vacinas.
-
-2. O acompanhamento da vacinação ainda pode melhorar
-
-O IBGE registrou que 72% dos domicílios com cães ou gatos tinham todos os animais vacinados contra a raiva em 2019. No Nordeste, o número foi de 67,3%. (IBGE)
-
-Isso mostra que uma parte dos animais não estava com a vacinação completa no período analisado. A pesquisa, sozinha, não permite afirmar que o motivo seja o esquecimento, mas o resultado reforça a importância de facilitar esse acompanhamento.
-
-Como isso influencia o projeto:
-Os lembretes automáticos podem ser uma ferramenta importante para diminuir o risco de o tutor esquecer uma próxima dose. No estudo de caso, a notificação está prevista para sete dias antes do vencimento.
-
-3. Guarda responsável envolve muito mais do que simplesmente ter um animal
-
-As fontes consultadas mostram que a guarda responsável envolve cuidados contínuos, como vacinação, prevenção de parasitas, alimentação, higiene e acompanhamento veterinário. O abandono também pode gerar consequências para a saúde pública. (CRMV-SP)
-
-Como isso influencia o projeto:
-O PetVida deve incentivar uma rotina de cuidados, e não apenas servir como uma carteira de vacinação. Por isso, recursos como o calendário de vermifugação, diário de sintomas e informações sobre serviços públicos fazem sentido dentro da proposta.
-
-9. Fontes utilizadas
-
-* Ministério da Saúde — Raiva Animal. Informações sobre vacinação, vigilância e controle da raiva em cães e gatos. (Serviços e Informações do Brasil)
-* Ministério da Saúde — Cobertura vacinal de cães e gatos. Dados sobre as campanhas de vacinação antirrábica e cobertura nacional. (Serviços e Informações do Brasil)
-* IBGE — Pesquisa Nacional de Saúde 2019. Dados sobre a presença de cães e gatos nos domicílios e vacinação contra a raiva. (Agência de Notícias IBGE)
-* Conselho Regional de Medicina Veterinária de São Paulo (CRMV-SP) — Guarda Responsável. Informações sobre cuidados com animais e relação entre abandono e saúde pública. (CRMV-SP)
-* Conselho Federal de Medicina Veterinária (CFMV) — Abandono e guarda responsável. Informações sobre os deveres relacionados à guarda responsável e os impactos do abandono. (Conselho Federal de Medicina Veterinária)
+1. **Ministério da Saúde** — *Raiva Animal: Informações sobre vacinação, vigilância e controle da raiva em cães e gatos.*
+2. **Ministério da Saúde** — *Dados sobre as campanhas de vacinação antirrábica e cobertura nacional.*
+3. **Instituto Brasileiro de Geografia e Estatística (IBGE)** — *Pesquisa Nacional de Saúde (PNS) 2019: Acesso ao serviço de saúde, condições de saúde e cobertura vacinal.*
+4. **Conselho Regional de Medicina Veterinária de São Paulo (CRMV-SP)** — *Guarda Responsável e Impactos do Abandono na Saúde Pública.*
+5. **Conselho Federal de Medicina Veterinária (CFMV)** — *Manual de Guarda Responsável e Prevenção às Zoonoses.*
