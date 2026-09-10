@@ -21,10 +21,10 @@
 - **Heitor & Arthur Costa:** Pesquisa sobre a atividade.
 
 
+#--------------------------------------------------------------------------------------------------#
+# Atividade 2 - Pesquisa, BenchMarck e Personas.
 
-## Atividade 2 - Pesquisa, BenchMarck e Personas.
-
-# Responsabilidade de cada integrante nessa atividade
+## Responsabilidade de cada integrante nessa atividade
 - **Jorge Vitor**: Busca de 3 benchmarcks
 - **Byron**: Definição das personas
 - **João Murilo**: criação dos slides
