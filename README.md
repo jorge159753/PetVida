@@ -24,6 +24,15 @@
 #--------------------------------------------------------------------------------------------------#
 # Atividade 2 - Pesquisa, BenchMarck e Personas.
 
+## Turma 
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição do projeto
+
+- A atividade de hoje teve como objetivo realizar pesquisas para compreender melhor o **problema que será abordado no projeto.** Foram analisadas **referências de soluções existentes, identificados possíveis problemas e necessidades dos usuários e definidas as personas que representam nosso público-alvo.**
+
+
 ## Responsabilidade de cada integrante nessa atividade
 - **Jorge Vitor**: Busca de 3 benchmarcks
 - **Byron**: Definição das personas
