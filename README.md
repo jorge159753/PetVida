@@ -28,7 +28,7 @@
 
 - PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
 
-## Breve descrição do projeto
+## Breve descrição da atividade
 
 - A atividade de hoje teve como objetivo realizar pesquisas para compreender melhor o **problema que será abordado no projeto.** Foram analisadas **referências de soluções existentes, identificados possíveis problemas e necessidades dos usuários e definidas as personas que representam nosso público-alvo.**
 
