@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -21,6 +24,20 @@ class _TimelineEvent {
     this.note,
   });
 
+  factory _TimelineEvent.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+    return _TimelineEvent(
+      icon: Icons.event,
+      color: AppColors.laranjaTerracota,
+      title: (data['titulo'] as String?) ?? 'Evento',
+      subtitle: (data['subtitulo'] as String?) ?? '',
+      date: (data['data'] as String?) ?? '',
+      pet: data['pet'] as String?,
+    );
+  }
+
   final IconData icon;
   final Color color;
   final String title;
@@ -31,9 +48,48 @@ class _TimelineEvent {
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  static const _pets = ['Fofo', 'Mago', 'Amarelo', 'Bolo'];
+  static const _mockPets = ['Fofo', 'Mago', 'Amarelo', 'Bolo'];
 
-  final List<_TimelineEvent> _events = const [
+  List<String> _petsCadastrados = [];
+
+  List<String> get _petsDisponiveis =>
+      _petsCadastrados.isNotEmpty ? _petsCadastrados : _mockPets;
+
+  DocumentReference<Map<String, dynamic>>? get _userDocument {
+    if (Firebase.apps.isEmpty) return null;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance.collection('users').doc(uid);
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _eventsCollection =>
+      _userDocument?.collection('eventos');
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPetsCadastrados();
+  }
+
+  Future<void> _carregarPetsCadastrados() async {
+    final collection = _userDocument?.collection('pets');
+    if (collection == null) return;
+    try {
+      final snapshot = await collection.get();
+      final nomes = snapshot.docs
+          .map((doc) => (doc.data()['nome'] as String?)?.trim())
+          .whereType<String>()
+          .where((nome) => nome.isNotEmpty)
+          .toList();
+      if (mounted && nomes.isNotEmpty) {
+        setState(() => _petsCadastrados = nomes);
+      }
+    } catch (_) {
+      // Mantém a lista de exemplo em caso de erro.
+    }
+  }
+
+  final List<_TimelineEvent> _mockEvents = [
     _TimelineEvent(
       icon: Icons.vaccines,
       color: AppColors.laranjaArdente,
@@ -67,13 +123,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
       pet: 'Fofo',
       note: 'Tudo OK!',
     ),
-  ].toList();
+  ];
 
   String? _filterPet;
 
-  List<_TimelineEvent> get _filteredEvents {
-    if (_filterPet == null) return _events;
-    return _events.where((e) => e.pet == _filterPet).toList();
+  List<_TimelineEvent> _filtrar(List<_TimelineEvent> events) {
+    if (_filterPet == null) return events;
+    return events.where((e) => e.pet == _filterPet).toList();
   }
 
   void _showSnackBar(String message) {
@@ -101,7 +157,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   color: AppColors.laranjaTerracota,
                 ),
               ),
-              for (final pet in _pets)
+              for (final pet in _petsDisponiveis)
                 ListTile(
                   title: Text(pet),
                   onTap: () => Navigator.of(context).pop(pet),
@@ -124,7 +180,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final titleController = TextEditingController();
     final subtitleController = TextEditingController();
     final dateController = TextEditingController();
-    var selectedPet = _pets.first;
+    var selectedPet = _petsDisponiveis.first;
 
     final added = await showDialog<bool>(
       context: context,
@@ -152,7 +208,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: selectedPet,
                     items: [
-                      for (final pet in _pets)
+                      for (final pet in _petsDisponiveis)
                         DropdownMenuItem(value: pet, child: Text(pet)),
                     ],
                     onChanged: (value) {
@@ -189,27 +245,46 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return;
     }
 
-    setState(() {
-      _events.insert(
-        0,
-        _TimelineEvent(
-          icon: Icons.event,
-          color: AppColors.laranjaTerracota,
-          title: titleController.text.trim(),
-          subtitle: subtitleController.text.trim(),
-          date: dateController.text.trim().isEmpty
-              ? 'Hoje'
-              : dateController.text.trim(),
-          pet: selectedPet,
-        ),
-      );
-    });
-    _showSnackBar('Evento adicionado!');
+    final data = dateController.text.trim().isEmpty
+        ? 'Hoje'
+        : dateController.text.trim();
+    final collection = _eventsCollection;
+
+    if (collection == null) {
+      setState(() {
+        _mockEvents.insert(
+          0,
+          _TimelineEvent(
+            icon: Icons.event,
+            color: AppColors.laranjaTerracota,
+            title: titleController.text.trim(),
+            subtitle: subtitleController.text.trim(),
+            date: data,
+            pet: selectedPet,
+          ),
+        );
+      });
+      _showSnackBar('Evento adicionado!');
+      return;
+    }
+
+    try {
+      await collection.add({
+        'titulo': titleController.text.trim(),
+        'subtitulo': subtitleController.text.trim(),
+        'data': data,
+        'pet': selectedPet,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) _showSnackBar('Evento adicionado!');
+    } catch (_) {
+      if (mounted) _showSnackBar('Não foi possível adicionar o evento.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final events = _filteredEvents;
+    final collection = _eventsCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
       body: SafeArea(
@@ -265,19 +340,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      if (events.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
-                          child: Center(
-                            child: Text('Nenhum evento encontrado.'),
-                          ),
-                        )
+                      if (collection == null)
+                        _EventsList(events: _filtrar(_mockEvents))
                       else
-                        for (var i = 0; i < events.length; i++) ...[
-                          _TimelineCard(event: events[i]),
-                          if (i != events.length - 1)
-                            const _TimelineConnector(),
-                        ],
+                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                          stream: collection
+                              .orderBy('createdAt', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            final events = (snapshot.data?.docs ?? [])
+                                .map(_TimelineEvent.fromFirestore)
+                                .toList();
+                            return _EventsList(events: _filtrar(events));
+                          },
+                        ),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -290,6 +366,30 @@ class _TimelineScreenState extends State<TimelineScreen> {
       bottomNavigationBar: _PetVidaBottomNav(
         onTap: () => _showSnackBar('Em breve.'),
       ),
+    );
+  }
+}
+
+class _EventsList extends StatelessWidget {
+  const _EventsList({required this.events});
+
+  final List<_TimelineEvent> events;
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: Text('Nenhum evento encontrado.')),
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < events.length; i++) ...[
+          _TimelineCard(event: events[i]),
+          if (i != events.length - 1) const _TimelineConnector(),
+        ],
+      ],
     );
   }
 }

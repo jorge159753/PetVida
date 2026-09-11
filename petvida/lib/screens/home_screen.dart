@@ -1,10 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'clinics_screen.dart';
 import 'login_screen.dart';
 import 'meus_pets_screen.dart';
+import 'pet_profile_screen.dart';
 import 'symptom_diary_screen.dart';
 import 'timeline_screen.dart';
 
@@ -71,7 +74,18 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     _PetsRow(
-                      onTap: () => _abrirTela(context, const MeusPetsScreen()),
+                      onTapAdicionar: () =>
+                          _abrirTela(context, const MeusPetsScreen()),
+                      onTapPet: (pet) => _abrirTela(
+                        context,
+                        PetProfileScreen(
+                          petId: pet.id,
+                          nome: pet.nome,
+                          especie: pet.especie,
+                          idade: pet.idade,
+                          badges: const ['Cadastro Completo'],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     _ActionGrid(
@@ -168,22 +182,88 @@ class _Header extends StatelessWidget {
 }
 
 class _Pet {
-  const _Pet(this.nome, this.status, this.statusOk);
+  const _Pet(
+    this.nome,
+    this.status,
+    this.statusOk, {
+    this.id,
+    this.especie = 'Não informado',
+    this.idade = 'Idade não informada',
+  });
+
+  factory _Pet.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+    final nome = (data['nome'] as String?)?.trim();
+    final especie = (data['especie'] as String?)?.trim();
+    final idade = (data['idade'] as String?)?.trim();
+    return _Pet(
+      (nome == null || nome.isEmpty) ? 'Sem nome' : nome,
+      'Sem Vacinas',
+      false,
+      id: doc.id,
+      especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
+      idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
+    );
+  }
+
+  final String? id;
   final String nome;
   final String status;
   final bool statusOk;
+  final String especie;
+  final String idade;
 }
 
 class _PetsRow extends StatelessWidget {
-  const _PetsRow({required this.onTap});
+  const _PetsRow({required this.onTapAdicionar, required this.onTapPet});
 
-  final VoidCallback onTap;
+  final VoidCallback onTapAdicionar;
+  final ValueChanged<_Pet> onTapPet;
 
-  static const _pets = [
+  static const _mockPets = [
     _Pet('Fofo', 'Carteira Completa', true),
     _Pet('Mago', 'Próxima Vacina', false),
     _Pet('Amarelo', 'Próxima Vacina', false),
   ];
+
+  CollectionReference<Map<String, dynamic>>? get _petsCollection {
+    if (Firebase.apps.isEmpty) return null;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('pets');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final collection = _petsCollection;
+    if (collection == null) {
+      return _PetsList(pets: _mockPets, onTapAdicionar: onTapAdicionar, onTapPet: onTapPet);
+    }
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: collection.orderBy('createdAt').snapshots(),
+      builder: (context, snapshot) {
+        final pets = (snapshot.data?.docs ?? []).map(_Pet.fromFirestore).toList();
+        return _PetsList(pets: pets, onTapAdicionar: onTapAdicionar, onTapPet: onTapPet);
+      },
+    );
+  }
+}
+
+class _PetsList extends StatelessWidget {
+  const _PetsList({
+    required this.pets,
+    required this.onTapAdicionar,
+    required this.onTapPet,
+  });
+
+  final List<_Pet> pets;
+  final VoidCallback onTapAdicionar;
+  final ValueChanged<_Pet> onTapPet;
 
   @override
   Widget build(BuildContext context) {
@@ -192,8 +272,9 @@ class _PetsRow extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          for (final pet in _pets) _PetCard(pet: pet),
-          _AddPetCard(onTap: onTap),
+          for (final pet in pets)
+            _PetCard(pet: pet, onTap: () => onTapPet(pet)),
+          _AddPetCard(onTap: onTapAdicionar),
         ],
       ),
     );
@@ -201,44 +282,48 @@ class _PetsRow extends StatelessWidget {
 }
 
 class _PetCard extends StatelessWidget {
-  const _PetCard({required this.pet});
+  const _PetCard({required this.pet, required this.onTap});
 
   final _Pet pet;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.laranjaSolar, width: 1.5),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.begePata,
-            child: Icon(Icons.pets, color: AppColors.laranjaTerracota),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            pet.nome,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            height: 4,
-            width: 60,
-            decoration: BoxDecoration(
-              color: pet.statusOk ? Colors.green : AppColors.laranjaTerracota,
-              borderRadius: BorderRadius.circular(2),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 88,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.laranjaSolar, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              backgroundColor: AppColors.begePata,
+              child: Icon(Icons.pets, color: AppColors.laranjaTerracota),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              pet.nome,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              height: 4,
+              width: 60,
+              decoration: BoxDecoration(
+                color: pet.statusOk ? Colors.green : AppColors.laranjaTerracota,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
