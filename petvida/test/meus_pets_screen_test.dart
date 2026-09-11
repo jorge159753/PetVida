@@ -40,9 +40,9 @@ void main() {
     expect(find.text('Gato / Idade: 2 anos'), findsOneWidget);
   });
 
-  testWidgets('Tapping "Adicionar Pet" shows a placeholder message', (
-    WidgetTester tester,
-  ) async {
+  testWidgets(
+      'Tapping "Adicionar Pet" without Firebase asks the user to log in',
+      (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: MeusPetsScreen()));
 
     await tester.ensureVisible(find.text('Adicionar Pet'));
@@ -50,6 +50,6 @@ void main() {
     await tester.tap(find.text('Adicionar Pet'));
     await tester.pump();
 
-    expect(find.text('Em breve.'), findsOneWidget);
+    expect(find.text('Faça login para adicionar um pet.'), findsOneWidget);
   });
 }

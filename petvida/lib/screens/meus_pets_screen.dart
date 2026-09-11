@@ -1,11 +1,28 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'pet_profile_screen.dart';
 
 /// Tela "Meus Pets" (ver imagens/meus pets.png).
+///
+/// Quando o Firebase está inicializado, os pets vêm de
+/// `users/{uid}/pets` no Firestore. Sem Firebase (ex: testes de widget),
+/// usa uma lista de exemplo fixa.
 class MeusPetsScreen extends StatelessWidget {
   const MeusPetsScreen({super.key});
+
+  CollectionReference<Map<String, dynamic>>? get _petsCollection {
+    if (Firebase.apps.isEmpty) return null;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('pets');
+  }
 
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
@@ -26,43 +43,63 @@ class MeusPetsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _handleAdicionarPet(BuildContext context) async {
+    final collection = _petsCollection;
+    if (collection == null) {
+      _showSnackBar(context, 'Faça login para adicionar um pet.');
+      return;
+    }
+
+    final dados = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => const _AddPetDialog(),
+    );
+    if (dados == null) return;
+
+    try {
+      await collection.add({
+        'nome': dados['nome'],
+        'especie': dados['especie'],
+        'idade': dados['idade'],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) {
+        _showSnackBar(context, 'Pet adicionado com sucesso!');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível adicionar o pet.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final collection = _petsCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
       body: SafeArea(
         child: Column(
           children: [
-            _TopHeader(),
+            const _TopHeader(),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Meus Pets',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.laranjaTerracota,
-                      ),
+              child: collection == null
+                  ? _PetsList(pets: _mockPets, onTapAdicionar: () => _handleAdicionarPet(context), onTapPet: (pet) => _openPerfil(context, pet))
+                  : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: collection.orderBy('createdAt').snapshots(),
+                      builder: (context, snapshot) {
+                        final pets = (snapshot.data?.docs ?? [])
+                            .map(_Pet.fromFirestore)
+                            .toList();
+                        return _PetsList(
+                          pets: pets,
+                          isLoading:
+                              snapshot.connectionState == ConnectionState.waiting,
+                          onTapAdicionar: () => _handleAdicionarPet(context),
+                          onTapPet: (pet) => _openPerfil(context, pet),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 24),
-                    for (final pet in _pets) ...[
-                      _PetListCard(
-                        pet: pet,
-                        onTap: () => _openPerfil(context, pet),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    const SizedBox(height: 8),
-                    _AddPetButton(
-                      onTap: () => _showSnackBar(context, 'Em breve.'),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -85,6 +122,26 @@ class _Pet {
     required this.badgesPerfil,
   });
 
+  factory _Pet.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+    final nome = (data['nome'] as String?)?.trim();
+    final especie = (data['especie'] as String?)?.trim();
+    final idade = (data['idade'] as String?)?.trim();
+    return _Pet(
+      nome: (nome == null || nome.isEmpty) ? 'Sem nome' : nome,
+      especieRaca: (especie == null || especie.isEmpty)
+          ? 'Não informado'
+          : especie,
+      statusOk: 'Cadastro Completo',
+      statusAlerta: 'Sem Vacinas',
+      especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
+      idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
+      badgesPerfil: const ['Cadastro Completo'],
+    );
+  }
+
   final String nome;
   final String especieRaca;
   final String statusOk;
@@ -94,7 +151,7 @@ class _Pet {
   final List<String> badgesPerfil;
 }
 
-const _pets = [
+const _mockPets = [
   _Pet(
     nome: 'Fofo',
     especieRaca: 'Cão / Gato',
@@ -168,6 +225,57 @@ class _TopHeader extends StatelessWidget {
             backgroundColor: Colors.white,
             child: Icon(Icons.person, color: AppColors.laranjaSolar),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PetsList extends StatelessWidget {
+  const _PetsList({
+    required this.pets,
+    required this.onTapAdicionar,
+    required this.onTapPet,
+    this.isLoading = false,
+  });
+
+  final List<_Pet> pets;
+  final bool isLoading;
+  final VoidCallback onTapAdicionar;
+  final ValueChanged<_Pet> onTapPet;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Column(
+        children: [
+          const Text(
+            'Meus Pets',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: AppColors.laranjaTerracota,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (pets.isEmpty && !isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Text(
+                'Nenhum pet cadastrado ainda.\nToque em "Adicionar Pet" para começar!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 16),
+              ),
+            )
+          else
+            for (final pet in pets) ...[
+              _PetListCard(pet: pet, onTap: () => onTapPet(pet)),
+              const SizedBox(height: 16),
+            ],
+          const SizedBox(height: 8),
+          _AddPetButton(onTap: onTapAdicionar),
         ],
       ),
     );
@@ -294,6 +402,92 @@ class _AddPetButton extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
+    );
+  }
+}
+
+class _AddPetDialog extends StatefulWidget {
+  const _AddPetDialog();
+
+  @override
+  State<_AddPetDialog> createState() => _AddPetDialogState();
+}
+
+class _AddPetDialogState extends State<_AddPetDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nomeController = TextEditingController();
+  final _especieController = TextEditingController();
+  final _idadeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _especieController.dispose();
+    _idadeController.dispose();
+    super.dispose();
+  }
+
+  void _handleSalvar() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop({
+      'nome': _nomeController.text.trim(),
+      'especie': _especieController.text.trim(),
+      'idade': _idadeController.text.trim(),
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.cremeSuave,
+      title: const Text(
+        'Adicionar Pet',
+        style: TextStyle(
+          color: AppColors.laranjaTerracota,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nomeController,
+              decoration: const InputDecoration(labelText: 'Nome'),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'Digite o nome do pet'
+                  : null,
+            ),
+            TextFormField(
+              controller: _especieController,
+              decoration:
+                  const InputDecoration(labelText: 'Espécie (ex: Cão, Gato)'),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'Digite a espécie'
+                  : null,
+            ),
+            TextFormField(
+              controller: _idadeController,
+              decoration: const InputDecoration(labelText: 'Idade (ex: 2 anos)'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _handleSalvar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.laranjaTerracota,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Salvar'),
+        ),
+      ],
     );
   }
 }
