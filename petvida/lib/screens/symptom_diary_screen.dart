@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -24,10 +27,36 @@ class _SymptomRecord {
     required this.pet,
   });
 
+  factory _SymptomRecord.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+    final timestamp = data['data'] as Timestamp?;
+    return _SymptomRecord(
+      date: timestamp == null ? 'Data não informada' : _formatarDataCurta(timestamp.toDate()),
+      symptom: (data['sintoma'] as String?) ?? 'Sintoma',
+      severity: _severidadeFromLabel(data['severidade'] as String?),
+      pet: (data['pet'] as String?) ?? 'Pet',
+    );
+  }
+
   final String date;
   final String symptom;
   final _Severity severity;
   final String pet;
+}
+
+const _meses = [
+  'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+];
+
+String _formatarDataCurta(DateTime data) {
+  final agora = DateTime.now();
+  final texto = '${data.day.toString().padLeft(2, '0')} de ${_meses[data.month - 1]}';
+  final mesmoDia =
+      data.year == agora.year && data.month == agora.month && data.day == agora.day;
+  return mesmoDia ? '$texto (Hoje)' : texto;
 }
 
 enum _Severity { baixo, medio, alto }
@@ -56,6 +85,17 @@ extension on _Severity {
   }
 }
 
+_Severity _severidadeFromLabel(String? label) {
+  switch (label) {
+    case 'Baixo':
+      return _Severity.baixo;
+    case 'Alto':
+      return _Severity.alto;
+    default:
+      return _Severity.medio;
+  }
+}
+
 class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
   static const _symptoms = [
     _Symptom('Febre', Icons.thermostat),
@@ -65,15 +105,16 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
     _Symptom('Tosse', Icons.air),
   ];
 
-  static const _pets = ['Fofo', 'Mago', 'Amarelo'];
+  static const _mockPets = ['Fofo', 'Mago', 'Amarelo'];
 
   final _notesController = TextEditingController();
 
   int? _selectedSymptomIndex;
   double _severityValue = 1;
-  String _selectedPet = _pets.first;
+  String _selectedPet = _mockPets.first;
+  List<String> _petsCadastrados = [];
 
-  final List<_SymptomRecord> _records = const [
+  final List<_SymptomRecord> _mockRecords = [
     _SymptomRecord(
       date: '12 de Out (Hoje)',
       symptom: 'Letargia',
@@ -98,7 +139,47 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
       severity: _Severity.medio,
       pet: 'Bolo',
     ),
-  ].toList();
+  ];
+
+  DocumentReference<Map<String, dynamic>>? get _userDocument {
+    if (Firebase.apps.isEmpty) return null;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance.collection('users').doc(uid);
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _symptomsCollection =>
+      _userDocument?.collection('sintomas');
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPetsCadastrados();
+  }
+
+  Future<void> _carregarPetsCadastrados() async {
+    final collection = _userDocument?.collection('pets');
+    if (collection == null) return;
+    try {
+      final snapshot = await collection.get();
+      final nomes = snapshot.docs
+          .map((doc) => (doc.data()['nome'] as String?)?.trim())
+          .whereType<String>()
+          .where((nome) => nome.isNotEmpty)
+          .toList();
+      if (mounted && nomes.isNotEmpty) {
+        setState(() {
+          _petsCadastrados = nomes;
+          _selectedPet = nomes.first;
+        });
+      }
+    } catch (_) {
+      // Mantém a lista de exemplo em caso de erro.
+    }
+  }
+
+  List<String> get _petsDisponiveis =>
+      _petsCadastrados.isNotEmpty ? _petsCadastrados : _mockPets;
 
   @override
   void dispose() {
@@ -118,28 +199,55 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _handleAdicionarRegistro() {
+  Future<void> _handleAdicionarRegistro() async {
     if (_selectedSymptomIndex == null) {
       _showSnackBar('Selecione um sintoma.');
       return;
     }
 
     final symptom = _symptoms[_selectedSymptomIndex!];
-    setState(() {
-      _records.insert(
-        0,
-        _SymptomRecord(
-          date: 'Hoje',
-          symptom: symptom.label,
-          severity: _currentSeverity,
-          pet: _selectedPet,
-        ),
-      );
-      _selectedSymptomIndex = null;
-      _severityValue = 1;
-      _notesController.clear();
-    });
-    _showSnackBar('Registro de sintoma adicionado!');
+    final collection = _symptomsCollection;
+
+    if (collection == null) {
+      setState(() {
+        _mockRecords.insert(
+          0,
+          _SymptomRecord(
+            date: 'Hoje',
+            symptom: symptom.label,
+            severity: _currentSeverity,
+            pet: _selectedPet,
+          ),
+        );
+        _selectedSymptomIndex = null;
+        _severityValue = 1;
+        _notesController.clear();
+      });
+      _showSnackBar('Registro de sintoma adicionado!');
+      return;
+    }
+
+    try {
+      await collection.add({
+        'sintoma': symptom.label,
+        'severidade': _currentSeverity.label,
+        'pet': _selectedPet,
+        'anotacoes': _notesController.text.trim(),
+        'data': FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        setState(() {
+          _selectedSymptomIndex = null;
+          _severityValue = 1;
+          _notesController.clear();
+        });
+        _showSnackBar('Registro de sintoma adicionado!');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('Não foi possível adicionar o registro.');
+      }
+    }
   }
 
   @override
@@ -188,7 +296,7 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
                       },
                       notesController: _notesController,
                       selectedPet: _selectedPet,
-                      pets: _pets,
+                      pets: _petsDisponiveis,
                       onPetChanged: (pet) {
                         if (pet != null) setState(() => _selectedPet = pet);
                       },
@@ -204,7 +312,20 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _RecordsHistory(records: _records),
+                    if (_symptomsCollection == null)
+                      _RecordsHistory(records: _mockRecords)
+                    else
+                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: _symptomsCollection!
+                            .orderBy('data', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          final records = (snapshot.data?.docs ?? [])
+                              .map(_SymptomRecord.fromFirestore)
+                              .toList();
+                          return _RecordsHistory(records: records);
+                        },
+                      ),
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
