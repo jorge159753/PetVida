@@ -3,43 +3,29 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/petvida_logo.dart';
-import 'forgot_password_screen.dart';
 import 'home_screen.dart';
-import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+/// Tela de cadastro ("não tenho conta"). Sem mockup no Figma ainda, então
+/// segue o mesmo estilo visual da tela de login.
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  String _mensagemDeErro(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-email':
-        return 'E-mail inválido.';
-      case 'user-disabled':
-        return 'Esta conta foi desativada.';
-      case 'user-not-found':
-        return 'Não encontramos uma conta com esse e-mail.';
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'E-mail ou senha incorretos.';
-      default:
-        return 'Não foi possível entrar. Tente novamente.';
-    }
   }
 
   void _showSnackBar(String message) {
@@ -48,18 +34,36 @@ class _LoginScreenState extends State<LoginScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _handleLogin() async {
+  String _mensagemDeErro(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'E-mail inválido.';
+      case 'email-already-in-use':
+        return 'Já existe uma conta com esse e-mail.';
+      case 'weak-password':
+        return 'A senha precisa ter pelo menos 6 caracteres.';
+      default:
+        return 'Não foi possível criar a conta. Tente novamente.';
+    }
+  }
+
+  Future<void> _handleRegister() async {
     final email = _emailController.text.trim();
     final senha = _passwordController.text;
+    final confirmarSenha = _confirmPasswordController.text;
 
-    if (email.isEmpty || senha.isEmpty) {
-      _showSnackBar('Preencha e-mail e senha.');
+    if (email.isEmpty || senha.isEmpty || confirmarSenha.isEmpty) {
+      _showSnackBar('Preencha todos os campos.');
+      return;
+    }
+    if (senha != confirmarSenha) {
+      _showSnackBar('As senhas não coincidem.');
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: senha,
       );
@@ -72,18 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handleEsqueceuSenha() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-    );
-  }
-
-  void _handleNaoTenhoConta() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-    );
   }
 
   InputDecoration _inputDecoration(String hint) {
@@ -109,9 +101,16 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 48),
-              const PetVidaLogo(),
-              const Spacer(flex: 3),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.laranjaArdente),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const PetVidaLogo(size: 120),
+              const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -125,32 +124,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: const TextStyle(color: AppColors.laranjaArdente),
                 decoration: _inputDecoration('Digite a senha'),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _isLoading ? null : _handleEsqueceuSenha,
-                    child: const Text(
-                      'esqueceu a senha',
-                      style: TextStyle(color: AppColors.laranjaArdente),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _isLoading ? null : _handleNaoTenhoConta,
-                    child: const Text(
-                      'não tenho conta',
-                      style: TextStyle(color: AppColors.laranjaArdente),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 16),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.laranjaArdente),
+                decoration: _inputDecoration('Confirme a senha'),
+              ),
+              const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed: _isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.laranjaTerracota,
                     foregroundColor: Colors.white,
@@ -168,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text(
-                          'Login',
+                          'Cadastrar',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -176,7 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                 ),
               ),
-              const Spacer(flex: 4),
             ],
           ),
         ),
