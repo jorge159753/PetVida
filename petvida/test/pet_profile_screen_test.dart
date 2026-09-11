@@ -41,14 +41,17 @@ void main() {
     expect(find.text('Vacina OK'), findsOneWidget);
   });
 
-  testWidgets('Tapping "ADICIONAR VACINA" shows a placeholder message', (
-    WidgetTester tester,
-  ) async {
+  testWidgets(
+      'Tapping "ADICIONAR VACINA" without a petId tells the user it is unavailable',
+      (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
 
     await tester.tap(find.text('ADICIONAR VACINA'));
     await tester.pump();
 
-    expect(find.text('Em breve.'), findsOneWidget);
+    expect(
+      find.text('Não é possível adicionar vacina para este pet.'),
+      findsOneWidget,
+    );
   });
 }

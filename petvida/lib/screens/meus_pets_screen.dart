@@ -34,6 +34,7 @@ class MeusPetsScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PetProfileScreen(
+          petId: pet.id,
           nome: pet.nome,
           especie: pet.especie,
           idade: pet.idade,
@@ -113,6 +114,7 @@ class MeusPetsScreen extends StatelessWidget {
 
 class _Pet {
   const _Pet({
+    this.id,
     required this.nome,
     required this.especieRaca,
     required this.statusOk,
@@ -130,6 +132,7 @@ class _Pet {
     final especie = (data['especie'] as String?)?.trim();
     final idade = (data['idade'] as String?)?.trim();
     return _Pet(
+      id: doc.id,
       nome: (nome == null || nome.isEmpty) ? 'Sem nome' : nome,
       especieRaca: (especie == null || especie.isEmpty)
           ? 'Não informado'
@@ -142,6 +145,7 @@ class _Pet {
     );
   }
 
+  final String? id;
   final String nome;
   final String especieRaca;
   final String statusOk;
