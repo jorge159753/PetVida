@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "998317916069",
+    "project_id": "petvida-petdisp2026",
+    "storage_bucket": "petvida-petdisp2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:998317916069:android:d395ba2cd816a48297724c",
+        "android_client_info": {
+          "package_name": "com.petvida.petvida"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_Y2ZTYxERE7cpTwfGhJU4iMXc5_IdovI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
