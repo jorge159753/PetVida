@@ -2,7 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'clinics_screen.dart';
 import 'login_screen.dart';
+import 'meus_pets_screen.dart';
+import 'symptom_diary_screen.dart';
+import 'timeline_screen.dart';
 
 /// Tela inicial (ver imagens/tela inicial.png).
 class HomeScreen extends StatelessWidget {
@@ -22,6 +26,10 @@ class HomeScreen extends StatelessWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _abrirTela(BuildContext context, Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   Future<void> _handleSair(BuildContext context) async {
@@ -62,10 +70,19 @@ class HomeScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16, color: Colors.black54),
                     ),
                     const SizedBox(height: 20),
-                    _PetsRow(onTap: () => _showSnackBar(context, 'Em breve.')),
+                    _PetsRow(
+                      onTap: () => _abrirTela(context, const MeusPetsScreen()),
+                    ),
                     const SizedBox(height: 24),
                     _ActionGrid(
-                      onTap: () => _showSnackBar(context, 'Em breve.'),
+                      onTapMeusPets: () =>
+                          _abrirTela(context, const MeusPetsScreen()),
+                      onTapLinhaDoTempo: () =>
+                          _abrirTela(context, const TimelineScreen()),
+                      onTapClinicas: () =>
+                          _abrirTela(context, const ClinicsScreen()),
+                      onTapDiario: () =>
+                          _abrirTela(context, const SymptomDiaryScreen()),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -76,7 +93,9 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: _PetVidaBottomNav(
-        onTap: () => _showSnackBar(context, 'Em breve.'),
+        onTapClinicas: () => _abrirTela(context, const ClinicsScreen()),
+        onTapLinhaDoTempo: () => _abrirTela(context, const TimelineScreen()),
+        onTapPerfil: () => _showSnackBar(context, 'Em breve.'),
       ),
     );
   }
@@ -263,26 +282,37 @@ class _AddPetCard extends StatelessWidget {
 }
 
 class _ActionItem {
-  const _ActionItem(this.label, this.icon, this.color);
+  const _ActionItem(this.label, this.icon, this.color, this.onTap);
   final String label;
   final IconData icon;
   final Color color;
+  final VoidCallback onTap;
 }
 
 class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({required this.onTap});
+  const _ActionGrid({
+    required this.onTapMeusPets,
+    required this.onTapLinhaDoTempo,
+    required this.onTapClinicas,
+    required this.onTapDiario,
+  });
 
-  final VoidCallback onTap;
-
-  static const _items = [
-    _ActionItem('Meus Pets', Icons.shield, AppColors.laranjaTerracota),
-    _ActionItem('Linha do Tempo', Icons.calendar_month, AppColors.amareloPorDoSol),
-    _ActionItem('Clínicas e Campanhas', Icons.location_on, AppColors.laranjaSolar),
-    _ActionItem('Diário de Sintomas', Icons.assignment, AppColors.laranjaArdente),
-  ];
+  final VoidCallback onTapMeusPets;
+  final VoidCallback onTapLinhaDoTempo;
+  final VoidCallback onTapClinicas;
+  final VoidCallback onTapDiario;
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      _ActionItem('Meus Pets', Icons.shield, AppColors.laranjaTerracota, onTapMeusPets),
+      _ActionItem('Linha do Tempo', Icons.calendar_month, AppColors.amareloPorDoSol,
+          onTapLinhaDoTempo),
+      _ActionItem('Clínicas e Campanhas', Icons.location_on, AppColors.laranjaSolar,
+          onTapClinicas),
+      _ActionItem('Diário de Sintomas', Icons.assignment, AppColors.laranjaArdente,
+          onTapDiario),
+    ];
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -291,9 +321,9 @@ class _ActionGrid extends StatelessWidget {
       crossAxisSpacing: 16,
       childAspectRatio: 1.3,
       children: [
-        for (final item in _items)
+        for (final item in items)
           GestureDetector(
-            onTap: onTap,
+            onTap: item.onTap,
             child: Container(
               decoration: BoxDecoration(
                 color: item.color,
@@ -323,9 +353,15 @@ class _ActionGrid extends StatelessWidget {
 }
 
 class _PetVidaBottomNav extends StatelessWidget {
-  const _PetVidaBottomNav({required this.onTap});
+  const _PetVidaBottomNav({
+    required this.onTapClinicas,
+    required this.onTapLinhaDoTempo,
+    required this.onTapPerfil,
+  });
 
-  final VoidCallback onTap;
+  final VoidCallback onTapClinicas;
+  final VoidCallback onTapLinhaDoTempo;
+  final VoidCallback onTapPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -334,7 +370,14 @@ class _PetVidaBottomNav extends StatelessWidget {
       selectedItemColor: AppColors.laranjaTerracota,
       unselectedItemColor: Colors.black45,
       onTap: (index) {
-        if (index != 0) onTap();
+        switch (index) {
+          case 1:
+            onTapClinicas();
+          case 2:
+            onTapLinhaDoTempo();
+          case 3:
+            onTapPerfil();
+        }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),
