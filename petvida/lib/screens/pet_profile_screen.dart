@@ -84,6 +84,28 @@ class PetProfileScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _handleEditarFoto(BuildContext context) async {
+    final doc = _petDocument;
+    if (doc == null) {
+      _showSnackBar(context, 'Não é possível editar a foto deste pet.');
+      return;
+    }
+
+    final fotoBase64 = await _escolherNovaFotoBase64(context);
+    if (fotoBase64 == null) return;
+
+    try {
+      await doc.update({'fotoBase64': fotoBase64});
+      if (context.mounted) {
+        _showSnackBar(context, 'Foto atualizada com sucesso!');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível atualizar a foto.');
+      }
+    }
+  }
+
   Future<void> _handleEditar(
     BuildContext context,
     Map<String, dynamic>? dadosAtuais,
@@ -190,6 +212,7 @@ class PetProfileScreen extends StatelessWidget {
                     badges: badges,
                     fotoBase64: null,
                     onEditar: null,
+                    onTapFoto: null,
                   )
                 else
                   StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -203,6 +226,7 @@ class PetProfileScreen extends StatelessWidget {
                         badges: badges,
                         fotoBase64: dados?['fotoBase64'] as String?,
                         onEditar: () => _handleEditar(context, dados),
+                        onTapFoto: () => _handleEditarFoto(context),
                       );
                     },
                   ),
@@ -271,6 +295,59 @@ class PetProfileScreen extends StatelessWidget {
         ).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
       ),
     );
+  }
+}
+
+/// Abre um seletor de origem (galeria/câmera), escolhe a imagem e retorna
+/// seu conteúdo como Base64 já redimensionado, ou `null` se o usuário
+/// cancelar ou a seleção falhar.
+Future<String?> _escolherNovaFotoBase64(BuildContext context) async {
+  final origem = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: AppColors.cremeSuave,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(
+              Icons.photo_library,
+              color: AppColors.laranjaTerracota,
+            ),
+            title: const Text('Escolher da galeria'),
+            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.photo_camera,
+              color: AppColors.laranjaTerracota,
+            ),
+            title: const Text('Tirar foto'),
+            onTap: () => Navigator.of(context).pop(ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (origem == null) return null;
+
+  try {
+    final arquivo = await ImagePicker().pickImage(
+      source: origem,
+      maxWidth: 400,
+      maxHeight: 400,
+      imageQuality: 70,
+    );
+    if (arquivo == null) return null;
+    final bytes = await arquivo.readAsBytes();
+    return base64Encode(bytes);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a foto.')),
+      );
+    }
+    return null;
   }
 }
 
@@ -369,6 +446,7 @@ class _PetHeader extends StatelessWidget {
     required this.badges,
     required this.fotoBase64,
     required this.onEditar,
+    required this.onTapFoto,
   });
 
   final String nome;
@@ -377,6 +455,7 @@ class _PetHeader extends StatelessWidget {
   final List<String> badges;
   final String? fotoBase64;
   final VoidCallback? onEditar;
+  final VoidCallback? onTapFoto;
 
   ImageProvider? get _fotoProvider {
     final base64 = fotoBase64;
@@ -441,17 +520,38 @@ class _PetHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: 70,
-                backgroundColor: AppColors.begePata,
-                backgroundImage: _fotoProvider,
-                child: _fotoProvider == null
-                    ? const Icon(
-                        Icons.pets,
-                        size: 60,
-                        color: AppColors.laranjaTerracota,
-                      )
-                    : null,
+              GestureDetector(
+                onTap: onTapFoto,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 70,
+                      backgroundColor: AppColors.begePata,
+                      backgroundImage: _fotoProvider,
+                      child: _fotoProvider == null
+                          ? const Icon(
+                              Icons.pets,
+                              size: 60,
+                              color: AppColors.laranjaTerracota,
+                            )
+                          : null,
+                    ),
+                    if (onTapFoto != null)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppColors.laranjaTerracota,
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(width: 16),
               Column(
@@ -798,57 +898,12 @@ class _EditPetDialogState extends State<_EditPetDialog> {
   }
 
   Future<void> _escolherFoto() async {
-    final origem = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: AppColors.cremeSuave,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library,
-                color: AppColors.laranjaTerracota,
-              ),
-              title: const Text('Escolher da galeria'),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_camera,
-                color: AppColors.laranjaTerracota,
-              ),
-              title: const Text('Tirar foto'),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (origem == null) return;
-
-    try {
-      final arquivo = await ImagePicker().pickImage(
-        source: origem,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 70,
-      );
-      if (arquivo == null) return;
-      final bytes = await arquivo.readAsBytes();
-      setState(() {
-        _fotoBase64 = base64Encode(bytes);
-        _fotoAlterada = true;
-      });
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível selecionar a foto.'),
-          ),
-        );
-      }
-    }
+    final fotoBase64 = await _escolherNovaFotoBase64(context);
+    if (fotoBase64 == null) return;
+    setState(() {
+      _fotoBase64 = fotoBase64;
+      _fotoAlterada = true;
+    });
   }
 
   void _handleSalvar() {
