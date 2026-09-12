@@ -79,7 +79,7 @@ class PerfilScreen extends StatelessWidget {
                     bottomRight: Radius.circular(32),
                   ),
                 ),
-                child: const Center(child: PetVidaWordmark()),
+                child: const Center(child: PetVidaLogo(size: 64)),
               ),
               Expanded(
                 child: SingleChildScrollView(

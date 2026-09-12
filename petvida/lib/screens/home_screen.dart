@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -116,7 +118,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -128,36 +130,16 @@ class _Header extends StatelessWidget {
           bottomRight: Radius.circular(32),
         ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const PetVidaWordmark(),
-              GestureDetector(
-                onTap: onPerfil,
-                child: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, color: AppColors.laranjaSolar),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: const TextField(
-              enabled: false,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Buscar',
-                suffixIcon: Icon(Icons.search, color: AppColors.laranjaArdente),
-              ),
+          const SizedBox(width: 40, height: 40),
+          const Expanded(child: Center(child: PetVidaLogo(size: 64))),
+          GestureDetector(
+            onTap: onPerfil,
+            child: const CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: AppColors.laranjaSolar),
             ),
           ),
         ],
@@ -174,6 +156,7 @@ class _Pet {
     this.id,
     this.especie = 'Não informado',
     this.idade = 'Idade não informada',
+    this.fotoBase64,
   });
 
   factory _Pet.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
@@ -188,6 +171,7 @@ class _Pet {
       id: doc.id,
       especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
       idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
+      fotoBase64: data['fotoBase64'] as String?,
     );
   }
 
@@ -197,6 +181,17 @@ class _Pet {
   final bool statusOk;
   final String especie;
   final String idade;
+  final String? fotoBase64;
+
+  ImageProvider? get fotoProvider {
+    final base64 = fotoBase64;
+    if (base64 == null || base64.isEmpty) return null;
+    try {
+      return MemoryImage(base64Decode(base64));
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class _PetsRow extends StatelessWidget {
@@ -296,10 +291,13 @@ class _PetCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 24,
               backgroundColor: AppColors.begePata,
-              child: Icon(Icons.pets, color: AppColors.laranjaTerracota),
+              backgroundImage: pet.fotoProvider,
+              child: pet.fotoProvider == null
+                  ? const Icon(Icons.pets, color: AppColors.laranjaTerracota)
+                  : null,
             ),
             const SizedBox(height: 6),
             Text(

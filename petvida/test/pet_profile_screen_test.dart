@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:petvida/screens/pet_profile_screen.dart';
+import 'package:petvida/widgets/petvida_logo.dart';
 
 void main() {
   testWidgets('PetProfileScreen shows default pet data and badges', (
@@ -9,7 +10,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
 
-    expect(find.text('PetVida'), findsOneWidget);
+    expect(find.byType(PetVidaLogo), findsOneWidget);
     expect(find.text('Fofo'), findsOneWidget);
     expect(find.text('Gato / Idade: 2 anos'), findsOneWidget);
     expect(find.text('Vacina OK'), findsOneWidget);
@@ -42,26 +43,73 @@ void main() {
   });
 
   testWidgets(
-      'Tapping "ADICIONAR VACINA" without a petId tells the user it is unavailable',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+    'Tapping "ADICIONAR VACINA" without a petId tells the user it is unavailable',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
 
-    await tester.tap(find.text('ADICIONAR VACINA'));
-    await tester.pump();
+      await tester.tap(find.text('ADICIONAR VACINA'));
+      await tester.pump();
 
-    expect(
-      find.text('Não é possível adicionar vacina para este pet.'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.text('Não é possível adicionar vacina para este pet.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
-      'Edit icon and delete button are hidden without a petId (no Firestore doc to change)',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+    'Edit icon and delete button are hidden without a petId (no Firestore doc to change)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
 
-    expect(find.byIcon(Icons.edit), findsNothing);
-    expect(find.text('Excluir Pet'), findsNothing);
-    expect(find.byIcon(Icons.camera_alt), findsNothing);
-  });
+      expect(find.byIcon(Icons.edit), findsNothing);
+      expect(find.text('Excluir Pet'), findsNothing);
+      expect(find.byIcon(Icons.camera_alt), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Tapping "Histórico Médico" without a petId tells the user it is unavailable',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+
+      await tester.ensureVisible(find.text('Histórico Médico'));
+      await tester.tap(find.text('Histórico Médico'));
+      await tester.pump();
+
+      expect(
+        find.text('Não é possível abrir o histórico deste pet.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'Tapping "Medicamentos Atuais" without a petId tells the user it is unavailable',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+
+      await tester.ensureVisible(find.text('Medicamentos Atuais'));
+      await tester.tap(find.text('Medicamentos Atuais'));
+      await tester.pump();
+
+      expect(
+        find.text('Não é possível abrir os medicamentos deste pet.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'Tapping "Configurações do Pet" without a petId tells the user it is unavailable',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+
+      await tester.ensureVisible(find.text('Configurações do Pet'));
+      await tester.tap(find.text('Configurações do Pet'));
+      await tester.pump();
+
+      expect(find.text('Não é possível editar este pet.'), findsOneWidget);
+    },
+  );
 }

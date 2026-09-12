@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:petvida/screens/timeline_screen.dart';
 
 void main() {
-  testWidgets('TimelineScreen shows title, actions and mock events',
-      (WidgetTester tester) async {
+  testWidgets('TimelineScreen shows title, actions and mock events', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: TimelineScreen()));
 
     // "Linha do Tempo" aparece no título e na navegação inferior.
@@ -18,8 +19,9 @@ void main() {
     expect(find.text('Completou Carteira de Fofo!'), findsOneWidget);
   });
 
-  testWidgets('Tapping "Novo Evento" opens a dialog to add an event',
-      (WidgetTester tester) async {
+  testWidgets('Tapping "Novo Evento" opens a dialog to add an event', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: TimelineScreen()));
 
     await tester.tap(find.text('Novo Evento'));
@@ -34,8 +36,9 @@ void main() {
     expect(find.text('Banho'), findsOneWidget);
   });
 
-  testWidgets('Tapping "Filtros" opens a dialog to filter by pet',
-      (WidgetTester tester) async {
+  testWidgets('Tapping "Filtros" opens a dialog to filter by pet', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: TimelineScreen()));
 
     await tester.tap(find.text('Filtros'));

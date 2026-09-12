@@ -418,11 +418,11 @@ class _Header extends StatelessWidget {
           bottomRight: Radius.circular(32),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: const Row(
         children: [
-          const PetVidaWordmark(),
-          const CircleAvatar(
+          SizedBox(width: 40, height: 40),
+          Expanded(child: Center(child: PetVidaLogo(size: 64))),
+          CircleAvatar(
             radius: 20,
             backgroundColor: Colors.white,
             child: Icon(Icons.person, color: AppColors.laranjaSolar),
