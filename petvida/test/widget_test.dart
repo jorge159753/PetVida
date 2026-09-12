@@ -5,10 +5,12 @@ import 'package:petvida/screens/forgot_password_screen.dart';
 import 'package:petvida/screens/home_screen.dart';
 import 'package:petvida/screens/login_screen.dart';
 import 'package:petvida/screens/register_screen.dart';
+import 'package:petvida/widgets/petvida_logo.dart';
 
 void main() {
-  testWidgets('HomeScreen shows greeting and the four action cards',
-      (WidgetTester tester) async {
+  testWidgets('HomeScreen shows greeting and the four action cards', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
     expect(find.text('PetVida'), findsOneWidget);
@@ -21,11 +23,14 @@ void main() {
     expect(find.text('Adicionar Pet'), findsOneWidget);
   });
 
-  testWidgets('LoginScreen shows the expected fields and actions',
-      (WidgetTester tester) async {
+  testWidgets('LoginScreen shows the expected fields and actions', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
-    expect(find.text('PetVida'), findsOneWidget);
+    // A tela de login mostra a logo real (imagem), sem texto "PetVida"
+    // separado — o nome já está desenhado dentro do selo.
+    expect(find.byType(PetVidaLogo), findsOneWidget);
     expect(find.text('Digite o email'), findsOneWidget);
     expect(find.text('Digite a senha'), findsOneWidget);
     expect(find.text('esqueceu a senha'), findsOneWidget);
@@ -33,8 +38,9 @@ void main() {
     expect(find.text('Login'), findsOneWidget);
   });
 
-  testWidgets('LoginScreen shows validation message when fields are empty',
-      (WidgetTester tester) async {
+  testWidgets('LoginScreen shows validation message when fields are empty', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
     await tester.tap(find.text('Login'));
@@ -43,8 +49,9 @@ void main() {
     expect(find.text('Preencha e-mail e senha.'), findsOneWidget);
   });
 
-  testWidgets('Tapping "esqueceu a senha" opens ForgotPasswordScreen',
-      (WidgetTester tester) async {
+  testWidgets('Tapping "esqueceu a senha" opens ForgotPasswordScreen', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
     await tester.tap(find.text('esqueceu a senha'));
@@ -55,8 +62,9 @@ void main() {
     expect(find.text('Enviar'), findsOneWidget);
   });
 
-  testWidgets('Tapping "não tenho conta" opens RegisterScreen',
-      (WidgetTester tester) async {
+  testWidgets('Tapping "não tenho conta" opens RegisterScreen', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
     await tester.tap(find.text('não tenho conta'));
@@ -67,8 +75,9 @@ void main() {
     expect(find.text('Cadastrar'), findsOneWidget);
   });
 
-  testWidgets('RegisterScreen shows validation message when fields are empty',
-      (WidgetTester tester) async {
+  testWidgets('RegisterScreen shows validation message when fields are empty', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: RegisterScreen()));
 
     await tester.tap(find.text('Cadastrar'));
@@ -77,8 +86,9 @@ void main() {
     expect(find.text('Preencha todos os campos.'), findsOneWidget);
   });
 
-  testWidgets('ForgotPasswordScreen shows validation message for empty email',
-      (WidgetTester tester) async {
+  testWidgets('ForgotPasswordScreen shows validation message for empty email', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
 
     await tester.tap(find.text('Enviar'));

@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
+import '../widgets/petvida_logo.dart';
+import 'clinics_screen.dart';
+import 'perfil_screen.dart';
 
 /// Linha do Tempo (ver imagens/linha do tempo.png).
 class TimelineScreen extends StatefulWidget {
@@ -368,7 +371,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
         ),
       ),
       bottomNavigationBar: _PetVidaBottomNav(
-        onTap: () => _showSnackBar('Em breve.'),
+        onTapInicio: () =>
+            Navigator.of(context).popUntil((route) => route.isFirst),
+        onTapClinicas: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ClinicsScreen())),
+        onTapPerfil: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
       ),
     );
   }
@@ -421,14 +431,7 @@ class _Header extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'PetVida',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.laranjaTerracota,
-                ),
-              ),
+              const PetVidaWordmark(),
               const CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.white,
@@ -547,9 +550,15 @@ class _TimelineConnector extends StatelessWidget {
 }
 
 class _PetVidaBottomNav extends StatelessWidget {
-  const _PetVidaBottomNav({required this.onTap});
+  const _PetVidaBottomNav({
+    required this.onTapInicio,
+    required this.onTapClinicas,
+    required this.onTapPerfil,
+  });
 
-  final VoidCallback onTap;
+  final VoidCallback onTapInicio;
+  final VoidCallback onTapClinicas;
+  final VoidCallback onTapPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +567,14 @@ class _PetVidaBottomNav extends StatelessWidget {
       selectedItemColor: AppColors.laranjaTerracota,
       unselectedItemColor: Colors.black45,
       onTap: (index) {
-        if (index != 2) onTap();
+        switch (index) {
+          case 0:
+            onTapInicio();
+          case 1:
+            onTapClinicas();
+          case 3:
+            onTapPerfil();
+        }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),

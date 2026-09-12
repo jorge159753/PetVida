@@ -6,6 +6,9 @@ import 'package:latlong2/latlong.dart' as ll;
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
+import '../widgets/petvida_logo.dart';
+import 'perfil_screen.dart';
+import 'timeline_screen.dart';
 
 /// Tela de Clínicas e Campanhas (ver imagens/Clínicas e camoanhas.png).
 class ClinicsScreen extends StatefulWidget {
@@ -337,7 +340,14 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
         ),
       ),
       bottomNavigationBar: _PetVidaBottomNav(
-        onTap: () => _showSnackBar('Em breve.'),
+        onTapInicio: () =>
+            Navigator.of(context).popUntil((route) => route.isFirst),
+        onTapLinhaDoTempo: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const TimelineScreen())),
+        onTapPerfil: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
       ),
     );
   }
@@ -375,17 +385,7 @@ class _Header extends StatelessWidget {
                   child: Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 ),
               ),
-              const Expanded(
-                child: Text(
-                  'PetVida',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.laranjaTerracota,
-                  ),
-                ),
-              ),
+              const Expanded(child: Center(child: PetVidaWordmark())),
               const CircleAvatar(
                 radius: 18,
                 backgroundColor: Colors.white,
@@ -541,19 +541,12 @@ class _RealMap extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Row(
               children: [
-                const Icon(
-                  Icons.location_off,
-                  size: 14,
-                  color: Colors.black54,
-                ),
+                const Icon(Icons.location_off, size: 14, color: Colors.black54),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     errorMessage!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ),
               ],
@@ -792,9 +785,15 @@ class _CampaignCard extends StatelessWidget {
 }
 
 class _PetVidaBottomNav extends StatelessWidget {
-  const _PetVidaBottomNav({required this.onTap});
+  const _PetVidaBottomNav({
+    required this.onTapInicio,
+    required this.onTapLinhaDoTempo,
+    required this.onTapPerfil,
+  });
 
-  final VoidCallback onTap;
+  final VoidCallback onTapInicio;
+  final VoidCallback onTapLinhaDoTempo;
+  final VoidCallback onTapPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -803,7 +802,14 @@ class _PetVidaBottomNav extends StatelessWidget {
       selectedItemColor: AppColors.laranjaTerracota,
       unselectedItemColor: Colors.black45,
       onTap: (index) {
-        if (index != 1) onTap();
+        switch (index) {
+          case 0:
+            onTapInicio();
+          case 2:
+            onTapLinhaDoTempo();
+          case 3:
+            onTapPerfil();
+        }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),

@@ -54,4 +54,13 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+      'Edit icon and delete button are hidden without a petId (no Firestore doc to change)',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+
+    expect(find.byIcon(Icons.edit), findsNothing);
+    expect(find.text('Excluir Pet'), findsNothing);
+  });
 }

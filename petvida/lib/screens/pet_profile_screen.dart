@@ -1,10 +1,17 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
+import '../widgets/petvida_logo.dart';
+import 'clinics_screen.dart';
+import 'perfil_screen.dart';
+import 'timeline_screen.dart';
 
 /// Tela de perfil do pet (ver imagens/perfil pet.png).
 ///
@@ -27,7 +34,7 @@ class PetProfileScreen extends StatelessWidget {
   final String idade;
   final List<String> badges;
 
-  CollectionReference<Map<String, dynamic>>? get _vacinasCollection {
+  DocumentReference<Map<String, dynamic>>? get _petDocument {
     if (petId == null || Firebase.apps.isEmpty) return null;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return null;
@@ -35,8 +42,11 @@ class PetProfileScreen extends StatelessWidget {
         .collection('users')
         .doc(uid)
         .collection('pets')
-        .doc(petId)
-        .collection('vacinas');
+        .doc(petId);
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _vacinasCollection {
+    return _petDocument?.collection('vacinas');
   }
 
   void _showSnackBar(BuildContext context, String message) {
@@ -74,8 +84,95 @@ class PetProfileScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _handleEditar(
+    BuildContext context,
+    Map<String, dynamic>? dadosAtuais,
+  ) async {
+    final doc = _petDocument;
+    if (doc == null) {
+      _showSnackBar(context, 'Não é possível editar este pet.');
+      return;
+    }
+
+    final resultado = await showDialog<Map<String, String?>>(
+      context: context,
+      builder: (_) => _EditPetDialog(
+        nomeInicial: (dadosAtuais?['nome'] as String?) ?? nome,
+        especieInicial: (dadosAtuais?['especie'] as String?) ?? especie,
+        idadeInicial: (dadosAtuais?['idade'] as String?) ?? idade,
+        fotoBase64Inicial: dadosAtuais?['fotoBase64'] as String?,
+      ),
+    );
+    if (resultado == null) return;
+
+    try {
+      await doc.update(resultado);
+      if (context.mounted) {
+        _showSnackBar(context, 'Pet atualizado com sucesso!');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível atualizar o pet.');
+      }
+    }
+  }
+
+  Future<void> _handleExcluir(BuildContext context) async {
+    final doc = _petDocument;
+    if (doc == null) {
+      _showSnackBar(context, 'Não é possível excluir este pet.');
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cremeSuave,
+        title: const Text(
+          'Excluir Pet',
+          style: TextStyle(
+            color: AppColors.laranjaTerracota,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Tem certeza que deseja excluir $nome? Essa ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    try {
+      final vacinas = await doc.collection('vacinas').get();
+      for (final vacinaDoc in vacinas.docs) {
+        await vacinaDoc.reference.delete();
+      }
+      await doc.delete();
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível excluir o pet.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final petDocument = _petDocument;
     final vacinasCollection = _vacinasCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
@@ -85,12 +182,30 @@ class PetProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _PetHeader(
-                  nome: nome,
-                  especie: especie,
-                  idade: idade,
-                  badges: badges,
-                ),
+                if (petDocument == null)
+                  _PetHeader(
+                    nome: nome,
+                    especie: especie,
+                    idade: idade,
+                    badges: badges,
+                    fotoBase64: null,
+                    onEditar: null,
+                  )
+                else
+                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: petDocument.snapshots(),
+                    builder: (context, snapshot) {
+                      final dados = snapshot.data?.data();
+                      return _PetHeader(
+                        nome: (dados?['nome'] as String?) ?? nome,
+                        especie: (dados?['especie'] as String?) ?? especie,
+                        idade: (dados?['idade'] as String?) ?? idade,
+                        badges: badges,
+                        fotoBase64: dados?['fotoBase64'] as String?,
+                        onEditar: () => _handleEditar(context, dados),
+                      );
+                    },
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                   child: Column(
@@ -128,6 +243,12 @@ class PetProfileScreen extends StatelessWidget {
                         label: 'Configurações do Pet',
                         onTap: () => _showSnackBar(context, 'Em breve.'),
                       ),
+                      if (petDocument != null) ...[
+                        const SizedBox(height: 20),
+                        _DeletePetButton(
+                          onTap: () => _handleExcluir(context),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -137,7 +258,17 @@ class PetProfileScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: _PetProfileBottomNav(
-        onTap: () => _showSnackBar(context, 'Em breve.'),
+        onTapInicio: () =>
+            Navigator.of(context).popUntil((route) => route.isFirst),
+        onTapClinicas: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ClinicsScreen())),
+        onTapLinhaDoTempo: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const TimelineScreen())),
+        onTapPerfil: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
       ),
     );
   }
@@ -236,12 +367,26 @@ class _PetHeader extends StatelessWidget {
     required this.especie,
     required this.idade,
     required this.badges,
+    required this.fotoBase64,
+    required this.onEditar,
   });
 
   final String nome;
   final String especie;
   final String idade;
   final List<String> badges;
+  final String? fotoBase64;
+  final VoidCallback? onEditar;
+
+  ImageProvider? get _fotoProvider {
+    final base64 = fotoBase64;
+    if (base64 == null || base64.isEmpty) return null;
+    try {
+      return MemoryImage(base64Decode(base64));
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -263,18 +408,31 @@ class _PetHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'PetVida',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.laranjaTerracota,
-                ),
-              ),
-              const CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: AppColors.laranjaSolar),
+              const PetVidaWordmark(),
+              Row(
+                children: [
+                  if (onEditar != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: onEditar,
+                        child: const CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: AppColors.laranjaTerracota,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, color: AppColors.laranjaSolar),
+                  ),
+                ],
               ),
             ],
           ),
@@ -283,14 +441,17 @@ class _PetHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 70,
                 backgroundColor: AppColors.begePata,
-                child: Icon(
-                  Icons.pets,
-                  size: 60,
-                  color: AppColors.laranjaTerracota,
-                ),
+                backgroundImage: _fotoProvider,
+                child: _fotoProvider == null
+                    ? const Icon(
+                        Icons.pets,
+                        size: 60,
+                        color: AppColors.laranjaTerracota,
+                      )
+                    : null,
               ),
               const SizedBox(width: 16),
               Column(
@@ -521,9 +682,17 @@ class _PetListItem extends StatelessWidget {
 }
 
 class _PetProfileBottomNav extends StatelessWidget {
-  const _PetProfileBottomNav({required this.onTap});
+  const _PetProfileBottomNav({
+    required this.onTapInicio,
+    required this.onTapClinicas,
+    required this.onTapLinhaDoTempo,
+    required this.onTapPerfil,
+  });
 
-  final VoidCallback onTap;
+  final VoidCallback onTapInicio;
+  final VoidCallback onTapClinicas;
+  final VoidCallback onTapLinhaDoTempo;
+  final VoidCallback onTapPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -532,7 +701,16 @@ class _PetProfileBottomNav extends StatelessWidget {
       selectedItemColor: AppColors.laranjaTerracota,
       unselectedItemColor: Colors.black45,
       onTap: (index) {
-        if (index != 0) onTap();
+        switch (index) {
+          case 0:
+            onTapInicio();
+          case 1:
+            onTapClinicas();
+          case 2:
+            onTapLinhaDoTempo();
+          case 3:
+            onTapPerfil();
+        }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),
@@ -542,6 +720,249 @@ class _PetProfileBottomNav extends StatelessWidget {
           label: 'Linha do Tempo',
         ),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+      ],
+    );
+  }
+}
+
+class _DeletePetButton extends StatelessWidget {
+  const _DeletePetButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        icon: const Icon(Icons.delete_outline),
+        label: const Text(
+          'Excluir Pet',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditPetDialog extends StatefulWidget {
+  const _EditPetDialog({
+    required this.nomeInicial,
+    required this.especieInicial,
+    required this.idadeInicial,
+    required this.fotoBase64Inicial,
+  });
+
+  final String nomeInicial;
+  final String especieInicial;
+  final String idadeInicial;
+  final String? fotoBase64Inicial;
+
+  @override
+  State<_EditPetDialog> createState() => _EditPetDialogState();
+}
+
+class _EditPetDialogState extends State<_EditPetDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _nomeController = TextEditingController(text: widget.nomeInicial);
+  late final _especieController = TextEditingController(
+    text: widget.especieInicial,
+  );
+  late final _idadeController = TextEditingController(
+    text: widget.idadeInicial,
+  );
+  String? _fotoBase64;
+  bool _fotoAlterada = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fotoBase64 = widget.fotoBase64Inicial;
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _especieController.dispose();
+    _idadeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _escolherFoto() async {
+    final origem = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.cremeSuave,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library,
+                color: AppColors.laranjaTerracota,
+              ),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera,
+                color: AppColors.laranjaTerracota,
+              ),
+              title: const Text('Tirar foto'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (origem == null) return;
+
+    try {
+      final arquivo = await ImagePicker().pickImage(
+        source: origem,
+        maxWidth: 400,
+        maxHeight: 400,
+        imageQuality: 70,
+      );
+      if (arquivo == null) return;
+      final bytes = await arquivo.readAsBytes();
+      setState(() {
+        _fotoBase64 = base64Encode(bytes);
+        _fotoAlterada = true;
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível selecionar a foto.'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleSalvar() {
+    if (!_formKey.currentState!.validate()) return;
+    final resultado = <String, String?>{
+      'nome': _nomeController.text.trim(),
+      'especie': _especieController.text.trim(),
+      'idade': _idadeController.text.trim(),
+    };
+    if (_fotoAlterada) {
+      resultado['fotoBase64'] = _fotoBase64;
+    }
+    Navigator.of(context).pop(resultado);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ImageProvider? fotoProvider;
+    final base64 = _fotoBase64;
+    if (base64 != null && base64.isNotEmpty) {
+      try {
+        fotoProvider = MemoryImage(base64Decode(base64));
+      } catch (_) {
+        fotoProvider = null;
+      }
+    }
+
+    return AlertDialog(
+      backgroundColor: AppColors.cremeSuave,
+      title: const Text(
+        'Editar Pet',
+        style: TextStyle(
+          color: AppColors.laranjaTerracota,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: _escolherFoto,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppColors.begePata,
+                      backgroundImage: fotoProvider,
+                      child: fotoProvider == null
+                          ? const Icon(
+                              Icons.pets,
+                              size: 36,
+                              color: AppColors.laranjaTerracota,
+                            )
+                          : null,
+                    ),
+                    const Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppColors.laranjaTerracota,
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nomeController,
+                decoration: const InputDecoration(labelText: 'Nome'),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Digite o nome do pet'
+                    : null,
+              ),
+              TextFormField(
+                controller: _especieController,
+                decoration: const InputDecoration(
+                  labelText: 'Espécie (ex: Cão, Gato)',
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Digite a espécie'
+                    : null,
+              ),
+              TextFormField(
+                controller: _idadeController,
+                decoration: const InputDecoration(
+                  labelText: 'Idade (ex: 2 anos)',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _handleSalvar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.laranjaTerracota,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Salvar'),
+        ),
       ],
     );
   }
