@@ -18,7 +18,10 @@ class PetVidaLogo extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.cremeSuave,
-        border: Border.all(color: AppColors.amareloPorDoSol, width: size * 0.03),
+        border: Border.all(
+          color: AppColors.amareloPorDoSol,
+          width: size * 0.03,
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

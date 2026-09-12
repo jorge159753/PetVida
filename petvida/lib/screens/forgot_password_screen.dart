@@ -77,7 +77,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.laranjaArdente),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.laranjaArdente,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -92,8 +95,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   hintText: 'Digite seu e-mail',
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,

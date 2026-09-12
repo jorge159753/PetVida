@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 
 /// Diário de Sintomas (ver imagens/diário de sintomas.png).
 class SymptomDiaryScreen extends StatefulWidget {
@@ -33,7 +34,9 @@ class _SymptomRecord {
     final data = doc.data();
     final timestamp = data['data'] as Timestamp?;
     return _SymptomRecord(
-      date: timestamp == null ? 'Data não informada' : _formatarDataCurta(timestamp.toDate()),
+      date: timestamp == null
+          ? 'Data não informada'
+          : _formatarDataCurta(timestamp.toDate()),
       symptom: (data['sintoma'] as String?) ?? 'Sintoma',
       severity: _severidadeFromLabel(data['severidade'] as String?),
       pet: (data['pet'] as String?) ?? 'Pet',
@@ -47,15 +50,28 @@ class _SymptomRecord {
 }
 
 const _meses = [
-  'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  'Jan',
+  'Fev',
+  'Mar',
+  'Abr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Set',
+  'Out',
+  'Nov',
+  'Dez',
 ];
 
 String _formatarDataCurta(DateTime data) {
   final agora = DateTime.now();
-  final texto = '${data.day.toString().padLeft(2, '0')} de ${_meses[data.month - 1]}';
+  final texto =
+      '${data.day.toString().padLeft(2, '0')} de ${_meses[data.month - 1]}';
   final mesmoDia =
-      data.year == agora.year && data.month == agora.month && data.day == agora.day;
+      data.year == agora.year &&
+      data.month == agora.month &&
+      data.day == agora.day;
   return mesmoDia ? '$texto (Hoje)' : texto;
 }
 
@@ -254,107 +270,112 @@ class _SymptomDiaryScreenState extends State<SymptomDiaryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _Header(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    const Row(
-                      children: [
-                        Text(
-                          'Diário de Sintomas',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _Header(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      const Row(
+                        children: [
+                          Text(
+                            'Diário de Sintomas',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.laranjaArdente,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(
+                            Icons.assignment,
                             color: AppColors.laranjaArdente,
                           ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.assignment, color: AppColors.laranjaArdente),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SymptomIconsRow(
-                      symptoms: _symptoms,
-                      selectedIndex: _selectedSymptomIndex,
-                      onSelect: (index) {
-                        setState(() => _selectedSymptomIndex = index);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _SeverityAndNotesCard(
-                      severityValue: _severityValue,
-                      onSeverityChanged: (value) {
-                        setState(() => _severityValue = value);
-                      },
-                      notesController: _notesController,
-                      selectedPet: _selectedPet,
-                      pets: _petsDisponiveis,
-                      onPetChanged: (pet) {
-                        if (pet != null) setState(() => _selectedPet = pet);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Histórico de Registros',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.laranjaTerracota,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_symptomsCollection == null)
-                      _RecordsHistory(records: _mockRecords)
-                    else
-                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: _symptomsCollection!
-                            .orderBy('data', descending: true)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          final records = (snapshot.data?.docs ?? [])
-                              .map(_SymptomRecord.fromFirestore)
-                              .toList();
-                          return _RecordsHistory(records: records);
+                      const SizedBox(height: 16),
+                      _SymptomIconsRow(
+                        symptoms: _symptoms,
+                        selectedIndex: _selectedSymptomIndex,
+                        onSelect: (index) {
+                          setState(() => _selectedSymptomIndex = index);
                         },
                       ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _handleAdicionarRegistro,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.laranjaTerracota,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
+                      const SizedBox(height: 16),
+                      _SeverityAndNotesCard(
+                        severityValue: _severityValue,
+                        onSeverityChanged: (value) {
+                          setState(() => _severityValue = value);
+                        },
+                        notesController: _notesController,
+                        selectedPet: _selectedPet,
+                        pets: _petsDisponiveis,
+                        onPetChanged: (pet) {
+                          if (pet != null) setState(() => _selectedPet = pet);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Histórico de Registros',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.laranjaTerracota,
                         ),
-                        icon: const Icon(Icons.add),
-                        label: const Text(
-                          'Adicionar Novo Registro de Sintoma',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 12),
+                      if (_symptomsCollection == null)
+                        _RecordsHistory(records: _mockRecords)
+                      else
+                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                          stream: _symptomsCollection!
+                              .orderBy('data', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            final records = (snapshot.data?.docs ?? [])
+                                .map(_SymptomRecord.fromFirestore)
+                                .toList();
+                            return _RecordsHistory(records: records);
+                          },
+                        ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: _handleAdicionarRegistro,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.laranjaTerracota,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: const Text(
+                            'Adicionar Novo Registro de Sintoma',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -458,12 +479,10 @@ class _SymptomIcon extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor:
-                selected ? AppColors.laranjaSolar : Colors.white,
+            backgroundColor: selected ? AppColors.laranjaSolar : Colors.white,
             child: Icon(
               symptom.icon,
-              color:
-                  selected ? Colors.white : AppColors.laranjaTerracota,
+              color: selected ? Colors.white : AppColors.laranjaTerracota,
             ),
           ),
           const SizedBox(height: 6),
@@ -506,6 +525,13 @@ class _SeverityAndNotesCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.laranjaTerracota, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,7 +549,11 @@ class _SeverityAndNotesCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3),
                   gradient: const LinearGradient(
-                    colors: [Colors.green, AppColors.amareloPorDoSol, Colors.red],
+                    colors: [
+                      Colors.green,
+                      AppColors.amareloPorDoSol,
+                      Colors.red,
+                    ],
                   ),
                 ),
               ),
@@ -532,7 +562,9 @@ class _SeverityAndNotesCard extends StatelessWidget {
                   activeTrackColor: Colors.transparent,
                   inactiveTrackColor: Colors.transparent,
                   thumbColor: AppColors.laranjaTerracota,
-                  overlayColor: AppColors.laranjaTerracota.withValues(alpha: 0.2),
+                  overlayColor: AppColors.laranjaTerracota.withValues(
+                    alpha: 0.2,
+                  ),
                 ),
                 child: Slider(
                   value: severityValue,
@@ -583,8 +615,10 @@ class _SeverityAndNotesCard extends StatelessWidget {
             decoration: InputDecoration(
               filled: true,
               fillColor: AppColors.cremeSuave,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -614,11 +648,16 @@ class _RecordsHistory extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.begePata,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        children: [
-          for (final record in records) _RecordTile(record: record),
-        ],
+        children: [for (final record in records) _RecordTile(record: record)],
       ),
     );
   }
@@ -635,7 +674,11 @@ class _RecordTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.calendar_today, color: AppColors.laranjaTerracota, size: 18),
+          const Icon(
+            Icons.calendar_today,
+            color: AppColors.laranjaTerracota,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

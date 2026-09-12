@@ -68,9 +68,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: senha,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } on FirebaseAuthException catch (e) {
       _showSnackBar(_mensagemDeErro(e));
     } finally {
@@ -104,7 +104,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.laranjaArdente),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.laranjaArdente,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
