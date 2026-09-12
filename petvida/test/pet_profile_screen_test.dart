@@ -62,5 +62,6 @@ void main() {
 
     expect(find.byIcon(Icons.edit), findsNothing);
     expect(find.text('Excluir Pet'), findsNothing);
+    expect(find.byIcon(Icons.camera_alt), findsNothing);
   });
 }
