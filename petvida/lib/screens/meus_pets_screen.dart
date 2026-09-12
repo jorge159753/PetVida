@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
+import '../widgets/petvida_logo.dart';
+import 'clinics_screen.dart';
+import 'perfil_screen.dart';
 import 'pet_profile_screen.dart';
+import 'timeline_screen.dart';
 
 /// Tela "Meus Pets" (ver imagens/meus pets.png).
 ///
@@ -114,7 +118,17 @@ class MeusPetsScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: _MeusPetsBottomNav(
-        onTap: () => _showSnackBar(context, 'Em breve.'),
+        onTapInicio: () =>
+            Navigator.of(context).popUntil((route) => route.isFirst),
+        onTapClinicas: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ClinicsScreen())),
+        onTapLinhaDoTempo: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const TimelineScreen())),
+        onTapPerfil: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
       ),
     );
   }
@@ -222,14 +236,7 @@ class _TopHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'PetVida',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: AppColors.laranjaTerracota,
-            ),
-          ),
+          const PetVidaWordmark(),
           const CircleAvatar(
             radius: 20,
             backgroundColor: Colors.white,
@@ -513,9 +520,17 @@ class _AddPetDialogState extends State<_AddPetDialog> {
 }
 
 class _MeusPetsBottomNav extends StatelessWidget {
-  const _MeusPetsBottomNav({required this.onTap});
+  const _MeusPetsBottomNav({
+    required this.onTapInicio,
+    required this.onTapClinicas,
+    required this.onTapLinhaDoTempo,
+    required this.onTapPerfil,
+  });
 
-  final VoidCallback onTap;
+  final VoidCallback onTapInicio;
+  final VoidCallback onTapClinicas;
+  final VoidCallback onTapLinhaDoTempo;
+  final VoidCallback onTapPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -524,7 +539,16 @@ class _MeusPetsBottomNav extends StatelessWidget {
       selectedItemColor: AppColors.laranjaTerracota,
       unselectedItemColor: Colors.black45,
       onTap: (index) {
-        if (index != 0) onTap();
+        switch (index) {
+          case 0:
+            onTapInicio();
+          case 1:
+            onTapClinicas();
+          case 2:
+            onTapLinhaDoTempo();
+          case 3:
+            onTapPerfil();
+        }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),

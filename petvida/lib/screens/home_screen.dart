@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
+import '../widgets/petvida_logo.dart';
 import 'clinics_screen.dart';
-import 'login_screen.dart';
 import 'meus_pets_screen.dart';
+import 'perfil_screen.dart';
 import 'pet_profile_screen.dart';
 import 'symptom_diary_screen.dart';
 import 'timeline_screen.dart';
@@ -26,23 +27,8 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   void _abrirTela(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-  }
-
-  Future<void> _handleSair(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
   }
 
   @override
@@ -57,7 +43,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _Header(
                   nomeTutor: _nomeTutor,
-                  onSair: () => _handleSair(context),
+                  onPerfil: () => _abrirTela(context, const PerfilScreen()),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -115,17 +101,17 @@ class HomeScreen extends StatelessWidget {
       bottomNavigationBar: _PetVidaBottomNav(
         onTapClinicas: () => _abrirTela(context, const ClinicsScreen()),
         onTapLinhaDoTempo: () => _abrirTela(context, const TimelineScreen()),
-        onTapPerfil: () => _showSnackBar(context, 'Em breve.'),
+        onTapPerfil: () => _abrirTela(context, const PerfilScreen()),
       ),
     );
   }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.nomeTutor, required this.onSair});
+  const _Header({required this.nomeTutor, required this.onPerfil});
 
   final String nomeTutor;
-  final VoidCallback onSair;
+  final VoidCallback onPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -147,16 +133,9 @@ class _Header extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'PetVida',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.laranjaTerracota,
-                ),
-              ),
+              const PetVidaWordmark(),
               GestureDetector(
-                onTap: onSair,
+                onTap: onPerfil,
                 child: const CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.white,
