@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
@@ -20,22 +23,102 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     _Clinic(
       nome: 'Clínica Veterinária Vida Animal',
       endereco: 'Av. Paulista, 1200 - Bela Vista',
-      distancia: '1.2 km',
       telefone: '(11) 3456-7890',
+      lat: -23.5629,
+      lng: -46.6544,
     ),
     _Clinic(
       nome: 'Hospital Veterinário São Francisco',
       endereco: 'Rua das Flores, 458 - Centro',
-      distancia: '2.8 km',
       telefone: '(11) 2345-6789',
+      lat: -23.5505,
+      lng: -46.6333,
     ),
     _Clinic(
       nome: 'Clínica Pet Amigo',
       endereco: 'Rua Boa Vista, 320 - Jardim América',
-      distancia: '3.5 km',
       telefone: '(11) 4567-8901',
+      lat: -23.5570,
+      lng: -46.6396,
     ),
   ];
+
+  ll.LatLng? _userLocation;
+  String? _locationError;
+  bool _loadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarLocalizacao();
+  }
+
+  Future<void> _carregarLocalizacao() async {
+    try {
+      final servicoAtivo = await Geolocator.isLocationServiceEnabled();
+      if (!servicoAtivo) {
+        if (mounted) {
+          setState(() {
+            _locationError = 'Ative o GPS para ver clínicas próximas.';
+            _loadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      var permissao = await Geolocator.checkPermission();
+      if (permissao == LocationPermission.denied) {
+        permissao = await Geolocator.requestPermission();
+      }
+      if (permissao == LocationPermission.denied ||
+          permissao == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _locationError = 'Permissão de localização negada.';
+            _loadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      final posicao = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _userLocation = ll.LatLng(posicao.latitude, posicao.longitude);
+          _loadingLocation = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _locationError = 'Não foi possível obter sua localização.';
+          _loadingLocation = false;
+        });
+      }
+    }
+  }
+
+  double? _distanciaEmKm(_Clinic clinic) {
+    final origem = _userLocation;
+    if (origem == null) return null;
+    final metros = Geolocator.distanceBetween(
+      origem.latitude,
+      origem.longitude,
+      clinic.lat,
+      clinic.lng,
+    );
+    return metros / 1000;
+  }
+
+  String _distanciaTexto(_Clinic clinic) {
+    final km = _distanciaEmKm(clinic);
+    if (km == null) return 'Distância indisponível';
+    return '${km.toStringAsFixed(1)} km';
+  }
 
   static const _campaigns = [
     _Campaign(
@@ -124,10 +207,19 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   }
 
   List<_Clinic> get _filteredClinics {
-    if (_query.isEmpty) return _clinics;
-    return _clinics
-        .where((c) => c.nome.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
+    final filtradas = _query.isEmpty
+        ? List<_Clinic>.from(_clinics)
+        : _clinics
+              .where((c) => c.nome.toLowerCase().contains(_query.toLowerCase()))
+              .toList();
+    if (_userLocation != null) {
+      filtradas.sort(
+        (a, b) => (_distanciaEmKm(a) ?? double.infinity).compareTo(
+          _distanciaEmKm(b) ?? double.infinity,
+        ),
+      );
+    }
+    return filtradas;
   }
 
   List<_Campaign> get _filteredCampaigns {
@@ -204,11 +296,17 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _MapPlaceholder(clinics: _filteredClinics),
+                      _RealMap(
+                        clinics: _filteredClinics,
+                        userLocation: _userLocation,
+                        loading: _loadingLocation,
+                        errorMessage: _locationError,
+                      ),
                       const SizedBox(height: 20),
                       for (final clinic in _filteredClinics)
                         _ClinicCard(
                           clinic: clinic,
+                          distancia: _distanciaTexto(clinic),
                           onTap: () => _handleClinicTap(clinic),
                         ),
                       if (_filteredCampaigns.isNotEmpty)
@@ -314,14 +412,16 @@ class _Clinic {
   const _Clinic({
     required this.nome,
     required this.endereco,
-    required this.distancia,
     required this.telefone,
+    required this.lat,
+    required this.lng,
   });
 
   final String nome;
   final String endereco;
-  final String distancia;
   final String telefone;
+  final double lat;
+  final double lng;
 }
 
 class _Campaign {
@@ -338,198 +438,141 @@ class _Campaign {
   final IconData icon;
 }
 
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({required this.clinics});
+class _RealMap extends StatelessWidget {
+  const _RealMap({
+    required this.clinics,
+    required this.userLocation,
+    required this.loading,
+    required this.errorMessage,
+  });
 
   final List<_Clinic> clinics;
-
-  static const _pinSlots = [
-    Alignment(-0.7, -0.55),
-    Alignment(0.05, -0.75),
-    Alignment(0.7, -0.15),
-    Alignment(-0.2, 0.4),
-    Alignment(0.6, 0.65),
-    Alignment(-0.75, 0.75),
-  ];
+  final ll.LatLng? userLocation;
+  final bool loading;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 190,
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.laranjaSolar, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: clinics.isEmpty
-          ? const Center(
-              child: Icon(
-                Icons.map,
-                color: AppColors.laranjaTerracota,
-                size: 40,
-              ),
-            )
-          : Stack(
-              children: [
-                const Positioned.fill(child: _MapStreets()),
-                for (var i = 0; i < clinics.length; i++)
-                  Align(
-                    alignment: _pinSlots[i % _pinSlots.length],
-                    child: _MapPin(clinic: clinics[i], emphasized: i == 0),
-                  ),
-              ],
-            ),
-    );
-  }
-}
+    final center =
+        userLocation ??
+        (clinics.isNotEmpty
+            ? ll.LatLng(clinics.first.lat, clinics.first.lng)
+            : const ll.LatLng(-23.5505, -46.6333));
 
-class _MapStreets extends StatelessWidget {
-  const _MapStreets();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 22,
-          left: -20,
-          right: -20,
-          child: Transform.rotate(
-            angle: -0.07,
-            child: Container(height: 10, color: AppColors.begePata),
-          ),
-        ),
-        Positioned(
-          top: 110,
-          left: -20,
-          right: -20,
-          child: Transform.rotate(
-            angle: 0.05,
-            child: Container(height: 8, color: AppColors.begePata),
-          ),
-        ),
-        Positioned(
-          top: -20,
-          bottom: -20,
-          left: 70,
-          child: Transform.rotate(
-            angle: 0.1,
-            child: Container(width: 8, color: AppColors.begePata),
-          ),
-        ),
-        Positioned(
-          top: -20,
-          bottom: -20,
-          right: 90,
-          child: Container(width: 6, color: AppColors.begePata),
-        ),
-        Positioned(
-          top: 34,
-          left: 24,
-          child: Container(
-            width: 60,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.amareloPorDoSol.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 24,
-          right: 34,
-          child: Container(
-            width: 48,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.laranjaSolar.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MapPin extends StatelessWidget {
-  const _MapPin({required this.clinic, required this.emphasized});
-
-  final _Clinic clinic;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: EdgeInsets.all(emphasized ? 7 : 5),
+          height: 190,
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: emphasized
-                ? AppColors.laranjaTerracota
-                : AppColors.laranjaSolar,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.laranjaSolar, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 4,
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Icon(
-            Icons.add_location_alt,
-            color: Colors.white,
-            size: emphasized ? 18 : 14,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Container(
-          constraints: const BoxConstraints(maxWidth: 92),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+          child: Stack(
+            children: [
+              FlutterMap(
+                options: MapOptions(initialCenter: center, initialZoom: 13),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.petvida.petvida',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      if (userLocation != null)
+                        Marker(
+                          point: userLocation!,
+                          width: 36,
+                          height: 36,
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Colors.blueAccent,
+                            size: 30,
+                          ),
+                        ),
+                      for (final clinic in clinics)
+                        Marker(
+                          point: ll.LatLng(clinic.lat, clinic.lng),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.laranjaTerracota,
+                            size: 36,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const RichAttributionWidget(
+                    attributions: [
+                      TextSourceAttribution('© OpenStreetMap contributors'),
+                    ],
+                  ),
+                ],
               ),
+              if (loading)
+                const Positioned(
+                  top: 8,
+                  right: 8,
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.laranjaTerracota,
+                    ),
+                  ),
+                ),
             ],
           ),
-          child: Text(
-            clinic.nome,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+        ),
+        if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.location_off,
+                  size: 14,
+                  color: Colors.black54,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    errorMessage!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
       ],
     );
   }
 }
 
 class _ClinicCard extends StatelessWidget {
-  const _ClinicCard({required this.clinic, required this.onTap});
+  const _ClinicCard({
+    required this.clinic,
+    required this.distancia,
+    required this.onTap,
+  });
 
   final _Clinic clinic;
+  final String distancia;
   final VoidCallback onTap;
 
   @override
@@ -611,7 +654,7 @@ class _ClinicCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            clinic.distancia,
+                            distancia,
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
