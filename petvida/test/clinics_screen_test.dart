@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:petvida/screens/clinics_screen.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') return null;
+      return null;
+    });
+  });
+
   testWidgets(
       'ClinicsScreen shows search bar, clinics and campaigns',
       (WidgetTester tester) async {
@@ -12,9 +23,11 @@ void main() {
     expect(find.text('Clínicas e Campanhas'), findsOneWidget);
     expect(find.text('Buscar clínicas ou campanhas...'), findsOneWidget);
     // Nome da clínica aparece no pin do mapa e no card da lista.
-    expect(find.text('Clínica Veterinária Patinhas'), findsNWidgets(2));
-    expect(find.text('Clínica Veterinária Mago'), findsNWidgets(2));
-    expect(find.text('Vacinação Antirrábica 2024'), findsNWidgets(2));
+    expect(find.text('Clínica Veterinária Vida Animal'), findsNWidgets(2));
+    expect(find.text('Hospital Veterinário São Francisco'), findsNWidgets(2));
+    expect(find.text('Clínica Pet Amigo'), findsNWidgets(2));
+    expect(find.text('Vacinação Antirrábica 2026'), findsOneWidget);
+    expect(find.text('Mutirão de Castração'), findsOneWidget);
     expect(find.text('Saiba Mais'), findsNWidgets(2));
   });
 
@@ -22,15 +35,12 @@ void main() {
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
 
-    await tester.enterText(
-      find.byType(TextField),
-      'Mago',
-    );
+    await tester.enterText(find.byType(TextField), 'Amigo');
     await tester.pump();
 
-    expect(find.text('Clínica Veterinária Mago'), findsNWidgets(2));
-    expect(find.text('Clínica Veterinária Patinhas'), findsNothing);
-    expect(find.text('Vacinação Antirrábica 2024'), findsNothing);
+    expect(find.text('Clínica Pet Amigo'), findsNWidgets(2));
+    expect(find.text('Clínica Veterinária Vida Animal'), findsNothing);
+    expect(find.text('Vacinação Antirrábica 2026'), findsNothing);
   });
 
   testWidgets('Searching for something with no match shows empty message',
@@ -43,7 +53,7 @@ void main() {
     expect(find.text('Nenhum resultado encontrado.'), findsOneWidget);
   });
 
-  testWidgets('Tapping "Saiba Mais" shows a snack bar',
+  testWidgets('Tapping "Saiba Mais" opens a dialog with full campaign info',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
 
@@ -53,8 +63,24 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('Saiba Mais').first);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('Em breve.'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Fechar'), findsOneWidget);
+  });
+
+  testWidgets('Tapping a clinic card copies its info and shows a snack bar',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
+
+    await tester.scrollUntilVisible(
+      find.text('Clínica Pet Amigo').last,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Clínica Pet Amigo').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Informações da clínica copiadas!'), findsOneWidget);
   });
 }
