@@ -383,15 +383,13 @@ class _AddPetCard extends StatelessWidget {
 class _ActionItem {
   const _ActionItem({
     required this.label,
-    required this.icon,
-    required this.badgeIcon,
+    required this.iconAsset,
     required this.gradient,
     required this.onTap,
   });
 
   final String label;
-  final IconData icon;
-  final IconData badgeIcon;
+  final String iconAsset;
   final List<Color> gradient;
   final VoidCallback onTap;
 }
@@ -414,29 +412,25 @@ class _ActionGrid extends StatelessWidget {
     final items = [
       _ActionItem(
         label: 'Meus Pets',
-        icon: Icons.shield,
-        badgeIcon: Icons.pets,
+        iconAsset: 'assets/icons/actions/meus_pets.png',
         gradient: const [AppColors.laranjaTerracota, AppColors.laranjaArdente],
         onTap: onTapMeusPets,
       ),
       _ActionItem(
         label: 'Linha do Tempo',
-        icon: Icons.calendar_month,
-        badgeIcon: Icons.schedule,
+        iconAsset: 'assets/icons/actions/linha_do_tempo.png',
         gradient: const [AppColors.amareloPorDoSol, AppColors.laranjaSolar],
         onTap: onTapLinhaDoTempo,
       ),
       _ActionItem(
         label: 'Clínicas e Campanhas',
-        icon: Icons.map,
-        badgeIcon: Icons.add_location_alt,
+        iconAsset: 'assets/icons/actions/clinicas_campanhas.png',
         gradient: const [AppColors.laranjaSolar, AppColors.amareloPorDoSol],
         onTap: onTapClinicas,
       ),
       _ActionItem(
         label: 'Diário de Sintomas',
-        icon: Icons.assignment,
-        badgeIcon: Icons.thermostat,
+        iconAsset: 'assets/icons/actions/diario_sintomas.png',
         gradient: const [AppColors.laranjaSolar, AppColors.laranjaArdente],
         onTap: onTapDiario,
       ),
@@ -482,7 +476,7 @@ class _ActionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _ComboIcon(icon: item.icon, badgeIcon: item.badgeIcon),
+            Image.asset(item.iconAsset, width: 56, height: 56),
             const SizedBox(height: 10),
             Text(
               item.label,
@@ -494,44 +488,6 @@ class _ActionCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ComboIcon extends StatelessWidget {
-  const _ComboIcon({required this.icon, required this.badgeIcon});
-
-  final IconData icon;
-  final IconData badgeIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 40),
-          Positioned(
-            right: -6,
-            bottom: -6,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                badgeIcon,
-                size: 14,
-                color: AppColors.laranjaTerracota,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
