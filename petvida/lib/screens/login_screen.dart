@@ -107,80 +107,101 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.cremeSuave,
       body: PawPrintsBackground(
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const SizedBox(height: 48),
-                const PetVidaLogo(),
-                const Spacer(flex: 3),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: AppColors.laranjaArdente),
-                  decoration: _inputDecoration('Digite o email'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  style: const TextStyle(color: AppColors.laranjaArdente),
-                  decoration: _inputDecoration('Digite a senha'),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: _isLoading ? null : _handleEsqueceuSenha,
-                      child: const Text(
-                        'esqueceu a senha',
-                        style: TextStyle(color: AppColors.laranjaArdente),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _isLoading ? null : _handleNaoTenhoConta,
-                      child: const Text(
-                        'não tenho conta',
-                        style: TextStyle(color: AppColors.laranjaArdente),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.laranjaTerracota,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 48),
+                        const PetVidaLogo(),
+                        const Spacer(flex: 3),
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(
+                            color: AppColors.laranjaArdente,
                           ),
+                          decoration: _inputDecoration('Digite o email'),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          style: const TextStyle(
+                            color: AppColors.laranjaArdente,
+                          ),
+                          decoration: _inputDecoration('Digite a senha'),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : _handleEsqueceuSenha,
+                              child: const Text(
+                                'esqueceu a senha',
+                                style: TextStyle(
+                                  color: AppColors.laranjaArdente,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : _handleNaoTenhoConta,
+                              child: const Text(
+                                'não tenho conta',
+                                style: TextStyle(
+                                  color: AppColors.laranjaArdente,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.laranjaTerracota,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const Spacer(flex: 4),
+                      ],
+                    ),
                   ),
                 ),
-                const Spacer(flex: 4),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
