@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 
 /// Tela de perfil do pet (ver imagens/perfil pet.png).
 ///
@@ -78,58 +79,60 @@ class PetProfileScreen extends StatelessWidget {
     final vacinasCollection = _vacinasCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PetHeader(
-                nome: nome,
-                especie: especie,
-                idade: idade,
-                badges: badges,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-                child: Column(
-                  children: [
-                    _AddVaccineButton(
-                      onTap: () => _handleAdicionarVacina(context),
-                    ),
-                    if (vacinasCollection != null) ...[
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PetHeader(
+                  nome: nome,
+                  especie: especie,
+                  idade: idade,
+                  badges: badges,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: Column(
+                    children: [
+                      _AddVaccineButton(
+                        onTap: () => _handleAdicionarVacina(context),
+                      ),
+                      if (vacinasCollection != null) ...[
+                        const SizedBox(height: 20),
+                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                          stream: vacinasCollection
+                              .orderBy('dataAplicacao', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            final docs = snapshot.data?.docs ?? [];
+                            return _VaccinesSection(docs: docs);
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 20),
-                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: vacinasCollection
-                            .orderBy('dataAplicacao', descending: true)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          final docs = snapshot.data?.docs ?? [];
-                          return _VaccinesSection(docs: docs);
-                        },
+                      _PetListItem(
+                        icon: Icons.local_hospital,
+                        label: 'Histórico Médico',
+                        onTap: () => _showSnackBar(context, 'Em breve.'),
+                      ),
+                      const SizedBox(height: 16),
+                      _PetListItem(
+                        icon: Icons.medication,
+                        label: 'Medicamentos Atuais',
+                        onTap: () => _showSnackBar(context, 'Em breve.'),
+                      ),
+                      const SizedBox(height: 16),
+                      _PetListItem(
+                        icon: Icons.settings,
+                        label: 'Configurações do Pet',
+                        onTap: () => _showSnackBar(context, 'Em breve.'),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    _PetListItem(
-                      icon: Icons.local_hospital,
-                      label: 'Histórico Médico',
-                      onTap: () => _showSnackBar(context, 'Em breve.'),
-                    ),
-                    const SizedBox(height: 16),
-                    _PetListItem(
-                      icon: Icons.medication,
-                      label: 'Medicamentos Atuais',
-                      onTap: () => _showSnackBar(context, 'Em breve.'),
-                    ),
-                    const SizedBox(height: 16),
-                    _PetListItem(
-                      icon: Icons.settings,
-                      label: 'Configurações do Pet',
-                      onTap: () => _showSnackBar(context, 'Em breve.'),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -189,8 +192,9 @@ class _VaccineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final nome = (data['nome'] as String?) ?? 'Vacina';
     final timestamp = data['dataAplicacao'] as Timestamp?;
-    final dataTexto =
-        timestamp == null ? 'Data não informada' : _formatarData(timestamp.toDate());
+    final dataTexto = timestamp == null
+        ? 'Data não informada'
+        : _formatarData(timestamp.toDate());
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -430,8 +434,9 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
           children: [
             TextFormField(
               controller: _nomeController,
-              decoration:
-                  const InputDecoration(labelText: 'Nome da vacina (ex: V10)'),
+              decoration: const InputDecoration(
+                labelText: 'Nome da vacina (ex: V10)',
+              ),
               validator: (value) => (value == null || value.trim().isEmpty)
                   ? 'Digite o nome da vacina'
                   : null,
@@ -441,8 +446,10 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Data de aplicação'),
               subtitle: Text(_formatarData(_dataAplicacao)),
-              trailing: const Icon(Icons.calendar_today,
-                  color: AppColors.laranjaTerracota),
+              trailing: const Icon(
+                Icons.calendar_today,
+                color: AppColors.laranjaTerracota,
+              ),
               onTap: _escolherData,
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 import 'pet_profile_screen.dart';
 
 /// Tela "Meus Pets" (ver imagens/meus pets.png).
@@ -79,30 +80,37 @@ class MeusPetsScreen extends StatelessWidget {
     final collection = _petsCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _TopHeader(),
-            Expanded(
-              child: collection == null
-                  ? _PetsList(pets: _mockPets, onTapAdicionar: () => _handleAdicionarPet(context), onTapPet: (pet) => _openPerfil(context, pet))
-                  : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: collection.orderBy('createdAt').snapshots(),
-                      builder: (context, snapshot) {
-                        final pets = (snapshot.data?.docs ?? [])
-                            .map(_Pet.fromFirestore)
-                            .toList();
-                        return _PetsList(
-                          pets: pets,
-                          isLoading:
-                              snapshot.connectionState == ConnectionState.waiting,
-                          onTapAdicionar: () => _handleAdicionarPet(context),
-                          onTapPet: (pet) => _openPerfil(context, pet),
-                        );
-                      },
-                    ),
-            ),
-          ],
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const _TopHeader(),
+              Expanded(
+                child: collection == null
+                    ? _PetsList(
+                        pets: _mockPets,
+                        onTapAdicionar: () => _handleAdicionarPet(context),
+                        onTapPet: (pet) => _openPerfil(context, pet),
+                      )
+                    : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: collection.orderBy('createdAt').snapshots(),
+                        builder: (context, snapshot) {
+                          final pets = (snapshot.data?.docs ?? [])
+                              .map(_Pet.fromFirestore)
+                              .toList();
+                          return _PetsList(
+                            pets: pets,
+                            isLoading:
+                                snapshot.connectionState ==
+                                ConnectionState.waiting,
+                            onTapAdicionar: () => _handleAdicionarPet(context),
+                            onTapPet: (pet) => _openPerfil(context, pet),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _MeusPetsBottomNav(
@@ -124,9 +132,7 @@ class _Pet {
     required this.badgesPerfil,
   });
 
-  factory _Pet.fromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  factory _Pet.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     final nome = (data['nome'] as String?)?.trim();
     final especie = (data['especie'] as String?)?.trim();
@@ -305,6 +311,13 @@ class _PetListCard extends StatelessWidget {
             colors: [AppColors.amareloPorDoSol, AppColors.begePata],
           ),
           borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -465,15 +478,18 @@ class _AddPetDialogState extends State<_AddPetDialog> {
             ),
             TextFormField(
               controller: _especieController,
-              decoration:
-                  const InputDecoration(labelText: 'Espécie (ex: Cão, Gato)'),
+              decoration: const InputDecoration(
+                labelText: 'Espécie (ex: Cão, Gato)',
+              ),
               validator: (value) => (value == null || value.trim().isEmpty)
                   ? 'Digite a espécie'
                   : null,
             ),
             TextFormField(
               controller: _idadeController,
-              decoration: const InputDecoration(labelText: 'Idade (ex: 2 anos)'),
+              decoration: const InputDecoration(
+                labelText: 'Idade (ex: 2 anos)',
+              ),
             ),
           ],
         ),

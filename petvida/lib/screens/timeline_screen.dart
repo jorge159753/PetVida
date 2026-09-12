@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 
 /// Linha do Tempo (ver imagens/linha do tempo.png).
 class TimelineScreen extends StatefulWidget {
@@ -198,8 +199,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                   TextField(
                     controller: subtitleController,
-                    decoration:
-                        const InputDecoration(hintText: 'Local (opcional)'),
+                    decoration: const InputDecoration(
+                      hintText: 'Local (opcional)',
+                    ),
                   ),
                   TextField(
                     controller: dateController,
@@ -287,80 +289,82 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final collection = _eventsCollection;
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _Header(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Linha do Tempo',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.laranjaArdente,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _handleFiltros,
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: AppColors.begePata,
-                              foregroundColor: AppColors.laranjaTerracota,
-                              side: BorderSide.none,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            icon: const Icon(Icons.tune, size: 18),
-                            label: const Text('Filtros'),
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _Header(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Linha do Tempo',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.laranjaArdente,
                           ),
-                          const Spacer(),
-                          ElevatedButton.icon(
-                            onPressed: _handleNovoEvento,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.laranjaTerracota,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Novo Evento'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      if (collection == null)
-                        _EventsList(events: _filtrar(_mockEvents))
-                      else
-                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                          stream: collection
-                              .orderBy('createdAt', descending: true)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            final events = (snapshot.data?.docs ?? [])
-                                .map(_TimelineEvent.fromFirestore)
-                                .toList();
-                            return _EventsList(events: _filtrar(events));
-                          },
                         ),
-                      const SizedBox(height: 24),
-                    ],
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _handleFiltros,
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: AppColors.begePata,
+                                foregroundColor: AppColors.laranjaTerracota,
+                                side: BorderSide.none,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              icon: const Icon(Icons.tune, size: 18),
+                              label: const Text('Filtros'),
+                            ),
+                            const Spacer(),
+                            ElevatedButton.icon(
+                              onPressed: _handleNovoEvento,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.laranjaTerracota,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Novo Evento'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        if (collection == null)
+                          _EventsList(events: _filtrar(_mockEvents))
+                        else
+                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                            stream: collection
+                                .orderBy('createdAt', descending: true)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              final events = (snapshot.data?.docs ?? [])
+                                  .map(_TimelineEvent.fromFirestore)
+                                  .toList();
+                              return _EventsList(events: _filtrar(events));
+                            },
+                          ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _PetVidaBottomNav(
@@ -465,6 +469,13 @@ class _TimelineCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.begePata,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,11 +541,7 @@ class _TimelineConnector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 32),
-      child: Container(
-        width: 3,
-        height: 16,
-        color: AppColors.laranjaSolar,
-      ),
+      child: Container(width: 3, height: 16, color: AppColors.laranjaSolar),
     );
   }
 }

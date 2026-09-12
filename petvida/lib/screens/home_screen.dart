@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 import 'clinics_screen.dart';
 import 'login_screen.dart';
 import 'meus_pets_screen.dart';
@@ -48,61 +49,66 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(nomeTutor: _nomeTutor, onSair: () => _handleSair(context)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    Text(
-                      'Olá, $_nomeTutor!',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const Text(
-                      'Bem-vindo(a) ao PetVida!',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 20),
-                    _PetsRow(
-                      onTapAdicionar: () =>
-                          _abrirTela(context, const MeusPetsScreen()),
-                      onTapPet: (pet) => _abrirTela(
-                        context,
-                        PetProfileScreen(
-                          petId: pet.id,
-                          nome: pet.nome,
-                          especie: pet.especie,
-                          idade: pet.idade,
-                          badges: const ['Cadastro Completo'],
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Header(
+                  nomeTutor: _nomeTutor,
+                  onSair: () => _handleSair(context),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Text(
+                        'Olá, $_nomeTutor!',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    _ActionGrid(
-                      onTapMeusPets: () =>
-                          _abrirTela(context, const MeusPetsScreen()),
-                      onTapLinhaDoTempo: () =>
-                          _abrirTela(context, const TimelineScreen()),
-                      onTapClinicas: () =>
-                          _abrirTela(context, const ClinicsScreen()),
-                      onTapDiario: () =>
-                          _abrirTela(context, const SymptomDiaryScreen()),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const Text(
+                        'Bem-vindo(a) ao PetVida!',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 20),
+                      _PetsRow(
+                        onTapAdicionar: () =>
+                            _abrirTela(context, const MeusPetsScreen()),
+                        onTapPet: (pet) => _abrirTela(
+                          context,
+                          PetProfileScreen(
+                            petId: pet.id,
+                            nome: pet.nome,
+                            especie: pet.especie,
+                            idade: pet.idade,
+                            badges: const ['Cadastro Completo'],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _ActionGrid(
+                        onTapMeusPets: () =>
+                            _abrirTela(context, const MeusPetsScreen()),
+                        onTapLinhaDoTempo: () =>
+                            _abrirTela(context, const TimelineScreen()),
+                        onTapClinicas: () =>
+                            _abrirTela(context, const ClinicsScreen()),
+                        onTapDiario: () =>
+                            _abrirTela(context, const SymptomDiaryScreen()),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -191,9 +197,7 @@ class _Pet {
     this.idade = 'Idade não informada',
   });
 
-  factory _Pet.fromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  factory _Pet.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     final nome = (data['nome'] as String?)?.trim();
     final especie = (data['especie'] as String?)?.trim();
@@ -242,13 +246,23 @@ class _PetsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final collection = _petsCollection;
     if (collection == null) {
-      return _PetsList(pets: _mockPets, onTapAdicionar: onTapAdicionar, onTapPet: onTapPet);
+      return _PetsList(
+        pets: _mockPets,
+        onTapAdicionar: onTapAdicionar,
+        onTapPet: onTapPet,
+      );
     }
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: collection.orderBy('createdAt').snapshots(),
       builder: (context, snapshot) {
-        final pets = (snapshot.data?.docs ?? []).map(_Pet.fromFirestore).toList();
-        return _PetsList(pets: pets, onTapAdicionar: onTapAdicionar, onTapPet: onTapPet);
+        final pets = (snapshot.data?.docs ?? [])
+            .map(_Pet.fromFirestore)
+            .toList();
+        return _PetsList(
+          pets: pets,
+          onTapAdicionar: onTapAdicionar,
+          onTapPet: onTapPet,
+        );
       },
     );
   }
@@ -367,10 +381,18 @@ class _AddPetCard extends StatelessWidget {
 }
 
 class _ActionItem {
-  const _ActionItem(this.label, this.icon, this.color, this.onTap);
+  const _ActionItem({
+    required this.label,
+    required this.icon,
+    required this.badgeIcon,
+    required this.gradient,
+    required this.onTap,
+  });
+
   final String label;
   final IconData icon;
-  final Color color;
+  final IconData badgeIcon;
+  final List<Color> gradient;
   final VoidCallback onTap;
 }
 
@@ -390,13 +412,34 @@ class _ActionGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _ActionItem('Meus Pets', Icons.shield, AppColors.laranjaTerracota, onTapMeusPets),
-      _ActionItem('Linha do Tempo', Icons.calendar_month, AppColors.amareloPorDoSol,
-          onTapLinhaDoTempo),
-      _ActionItem('Clínicas e Campanhas', Icons.location_on, AppColors.laranjaSolar,
-          onTapClinicas),
-      _ActionItem('Diário de Sintomas', Icons.assignment, AppColors.laranjaArdente,
-          onTapDiario),
+      _ActionItem(
+        label: 'Meus Pets',
+        icon: Icons.shield,
+        badgeIcon: Icons.pets,
+        gradient: const [AppColors.laranjaTerracota, AppColors.laranjaArdente],
+        onTap: onTapMeusPets,
+      ),
+      _ActionItem(
+        label: 'Linha do Tempo',
+        icon: Icons.calendar_month,
+        badgeIcon: Icons.schedule,
+        gradient: const [AppColors.amareloPorDoSol, AppColors.laranjaSolar],
+        onTap: onTapLinhaDoTempo,
+      ),
+      _ActionItem(
+        label: 'Clínicas e Campanhas',
+        icon: Icons.map,
+        badgeIcon: Icons.add_location_alt,
+        gradient: const [AppColors.laranjaSolar, AppColors.amareloPorDoSol],
+        onTap: onTapClinicas,
+      ),
+      _ActionItem(
+        label: 'Diário de Sintomas',
+        icon: Icons.assignment,
+        badgeIcon: Icons.thermostat,
+        gradient: const [AppColors.laranjaSolar, AppColors.laranjaArdente],
+        onTap: onTapDiario,
+      ),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -404,35 +447,92 @@ class _ActionGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 1.3,
-      children: [
-        for (final item in items)
-          GestureDetector(
-            onTap: item.onTap,
-            child: Container(
-              decoration: BoxDecoration(
-                color: item.color,
-                borderRadius: BorderRadius.circular(20),
+      childAspectRatio: 1.15,
+      children: [for (final item in items) _ActionCard(item: item)],
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({required this.item});
+
+  final _ActionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: item.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: item.gradient,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: item.gradient.last.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _ComboIcon(icon: item.icon, badgeIcon: item.badgeIcon),
+            const SizedBox(height: 10),
+            Text(
+              item.label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(item.icon, color: Colors.white, size: 32),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ComboIcon extends StatelessWidget {
+  const _ComboIcon({required this.icon, required this.badgeIcon});
+
+  final IconData icon;
+  final IconData badgeIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 40),
+          Positioned(
+            right: -6,
+            bottom: -6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                badgeIcon,
+                size: 14,
+                color: AppColors.laranjaTerracota,
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }

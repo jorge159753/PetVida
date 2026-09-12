@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/paw_prints_background.dart';
 
 /// Tela de Clínicas e Campanhas (ver imagens/Clínicas e camoanhas.png).
 class ClinicsScreen extends StatefulWidget {
@@ -32,7 +33,8 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   static const _campaigns = [
     _Campaign(
       titulo: 'Vacinação Antirrábica 2024',
-      descricao: 'Preciação para tempo em a data de Vacinação Antirrábica 2024.',
+      descricao:
+          'Preciação para tempo em a data de Vacinação Antirrábica 2024.',
       periodo: '08/01/2024 - 26/03/2024',
       icon: Icons.vaccines,
     ),
@@ -74,96 +76,100 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cremeSuave,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(onVoltar: () => Navigator.of(context).maybePop()),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Encontre os melhores cuidados\npara o seu pet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+      body: PawPrintsBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Header(onVoltar: () => Navigator.of(context).maybePop()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Encontre os melhores cuidados\npara o seu pet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) => setState(() => _query = value),
-                      style: const TextStyle(color: AppColors.laranjaArdente),
-                      decoration: InputDecoration(
-                        hintText: 'Buscar clínicas ou campanhas...',
-                        hintStyle:
-                            const TextStyle(color: AppColors.laranjaArdente),
-                        suffixIcon: const Icon(
-                          Icons.search,
-                          color: AppColors.laranjaArdente,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: AppColors.laranjaSolar,
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (value) => setState(() => _query = value),
+                        style: const TextStyle(color: AppColors.laranjaArdente),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar clínicas ou campanhas...',
+                          hintStyle: const TextStyle(
+                            color: AppColors.laranjaArdente,
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: AppColors.laranjaSolar,
+                          suffixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.laranjaArdente,
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: AppColors.laranjaTerracota,
-                            width: 2,
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _MapPlaceholder(clinics: _filteredClinics),
-                    const SizedBox(height: 20),
-                    for (final clinic in _filteredClinics)
-                      _ClinicCard(
-                        clinic: clinic,
-                        onTap: () => _showSnackBar('Em breve.'),
-                      ),
-                    if (_filteredCampaigns.isNotEmpty)
-                      const SizedBox(height: 8),
-                    for (final campaign in _filteredCampaigns)
-                      _CampaignCard(
-                        campaign: campaign,
-                        onSaibaMais: () => _showSnackBar('Em breve.'),
-                      ),
-                    if (_filteredClinics.isEmpty && _filteredCampaigns.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Text(
-                            'Nenhum resultado encontrado.',
-                            style: TextStyle(color: Colors.black54),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(
+                              color: AppColors.laranjaSolar,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(
+                              color: AppColors.laranjaSolar,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(
+                              color: AppColors.laranjaTerracota,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 20),
+                      _MapPlaceholder(clinics: _filteredClinics),
+                      const SizedBox(height: 20),
+                      for (final clinic in _filteredClinics)
+                        _ClinicCard(
+                          clinic: clinic,
+                          onTap: () => _showSnackBar('Em breve.'),
+                        ),
+                      if (_filteredCampaigns.isNotEmpty)
+                        const SizedBox(height: 8),
+                      for (final campaign in _filteredCampaigns)
+                        _CampaignCard(
+                          campaign: campaign,
+                          onSaibaMais: () => _showSnackBar('Em breve.'),
+                        ),
+                      if (_filteredClinics.isEmpty &&
+                          _filteredCampaigns.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(
+                            child: Text(
+                              'Nenhum resultado encontrado.',
+                              style: TextStyle(color: Colors.black54),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -203,11 +209,7 @@ class _Header extends StatelessWidget {
                 child: const CircleAvatar(
                   radius: 18,
                   backgroundColor: AppColors.laranjaTerracota,
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 ),
               ),
               const Expanded(
@@ -286,6 +288,13 @@ class _MapPlaceholder extends StatelessWidget {
         color: AppColors.begePata,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.laranjaSolar, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: clinics.isEmpty
           ? const Center(
@@ -344,6 +353,13 @@ class _ClinicCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.laranjaSolar, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,6 +469,13 @@ class _CampaignCard extends StatelessWidget {
           colors: [AppColors.amareloPorDoSol, AppColors.laranjaSolar],
         ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.laranjaSolar.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,10 +505,7 @@ class _CampaignCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   campaign.descricao,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
                 ),
                 const SizedBox(height: 6),
                 Row(
