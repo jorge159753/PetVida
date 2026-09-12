@@ -420,7 +420,7 @@ class _ActionGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 1.15,
+      childAspectRatio: 1.0,
       children: [for (final item in items) _ActionCard(item: item)],
     );
   }
@@ -455,7 +455,7 @@ class _ActionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(item.iconAsset, width: 56, height: 56),
+            Image.asset(item.iconAsset, width: 76, height: 76),
             const SizedBox(height: 10),
             Text(
               item.label,
@@ -463,6 +463,7 @@ class _ActionCard extends StatelessWidget {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+                fontSize: 17,
               ),
             ),
           ],

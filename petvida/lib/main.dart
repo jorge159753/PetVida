@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
@@ -22,6 +23,7 @@ class PetVidaApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.laranjaArdente),
         scaffoldBackgroundColor: AppColors.cremeSuave,
         useMaterial3: true,
+        textTheme: GoogleFonts.fredokaTextTheme(),
       ),
       home: const LoginScreen(),
     );
