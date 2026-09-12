@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:petvida/screens/meus_pets_screen.dart';
 import 'package:petvida/screens/pet_profile_screen.dart';
+import 'package:petvida/widgets/petvida_logo.dart';
 
 void main() {
   testWidgets('MeusPetsScreen shows title, pets and their status badges', (
@@ -10,7 +11,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: MeusPetsScreen()));
 
-    expect(find.text('PetVida'), findsOneWidget);
+    expect(find.byType(PetVidaLogo), findsOneWidget);
     expect(find.text('Meus Pets'), findsOneWidget);
 
     expect(find.text('Fofo'), findsOneWidget);
@@ -41,15 +42,16 @@ void main() {
   });
 
   testWidgets(
-      'Tapping "Adicionar Pet" without Firebase asks the user to log in',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MeusPetsScreen()));
+    'Tapping "Adicionar Pet" without Firebase asks the user to log in',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: MeusPetsScreen()));
 
-    await tester.ensureVisible(find.text('Adicionar Pet'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Adicionar Pet'));
-    await tester.pump();
+      await tester.ensureVisible(find.text('Adicionar Pet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar Pet'));
+      await tester.pump();
 
-    expect(find.text('Faça login para adicionar um pet.'), findsOneWidget);
-  });
+      expect(find.text('Faça login para adicionar um pet.'), findsOneWidget);
+    },
+  );
 }

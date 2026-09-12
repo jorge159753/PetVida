@@ -385,7 +385,7 @@ class _Header extends StatelessWidget {
                   child: Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 ),
               ),
-              const Expanded(child: Center(child: PetVidaWordmark())),
+              const Expanded(child: Center(child: PetVidaLogo(size: 64))),
               const CircleAvatar(
                 radius: 18,
                 backgroundColor: Colors.white,

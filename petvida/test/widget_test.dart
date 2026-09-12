@@ -13,7 +13,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
-    expect(find.text('PetVida'), findsOneWidget);
+    expect(find.byType(PetVidaLogo), findsOneWidget);
     expect(find.textContaining('Bem-vindo(a) ao PetVida!'), findsOneWidget);
     expect(find.text('Meus Pets'), findsOneWidget);
     // "Linha do Tempo" aparece no card de ação e na navegação inferior.

@@ -10,6 +10,8 @@ import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
 import '../widgets/petvida_logo.dart';
 import 'clinics_screen.dart';
+import 'historico_medico_screen.dart';
+import 'medicamentos_screen.dart';
 import 'perfil_screen.dart';
 import 'timeline_screen.dart';
 
@@ -253,25 +255,55 @@ class PetProfileScreen extends StatelessWidget {
                       _PetListItem(
                         icon: Icons.local_hospital,
                         label: 'Histórico Médico',
-                        onTap: () => _showSnackBar(context, 'Em breve.'),
+                        onTap: () {
+                          final id = petId;
+                          if (id == null) {
+                            _showSnackBar(
+                              context,
+                              'Não é possível abrir o histórico deste pet.',
+                            );
+                            return;
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => HistoricoMedicoScreen(
+                                petId: id,
+                                nomePet: nome,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       _PetListItem(
                         icon: Icons.medication,
                         label: 'Medicamentos Atuais',
-                        onTap: () => _showSnackBar(context, 'Em breve.'),
+                        onTap: () {
+                          final id = petId;
+                          if (id == null) {
+                            _showSnackBar(
+                              context,
+                              'Não é possível abrir os medicamentos deste pet.',
+                            );
+                            return;
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MedicamentosScreen(petId: id, nomePet: nome),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       _PetListItem(
                         icon: Icons.settings,
                         label: 'Configurações do Pet',
-                        onTap: () => _showSnackBar(context, 'Em breve.'),
+                        onTap: () => _handleEditar(context, null),
                       ),
                       if (petDocument != null) ...[
                         const SizedBox(height: 20),
-                        _DeletePetButton(
-                          onTap: () => _handleExcluir(context),
-                        ),
+                        _DeletePetButton(onTap: () => _handleExcluir(context)),
                       ],
                     ],
                   ),
@@ -485,9 +517,9 @@ class _PetHeader extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const PetVidaWordmark(),
+              SizedBox(width: onEditar != null ? 84 : 40, height: 40),
+              const Expanded(child: Center(child: PetVidaLogo(size: 64))),
               Row(
                 children: [
                   if (onEditar != null)

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -144,6 +146,7 @@ class _Pet {
     required this.especie,
     required this.idade,
     required this.badgesPerfil,
+    this.fotoBase64,
   });
 
   factory _Pet.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
@@ -162,6 +165,7 @@ class _Pet {
       especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
       idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
       badgesPerfil: const ['Cadastro Completo'],
+      fotoBase64: data['fotoBase64'] as String?,
     );
   }
 
@@ -173,6 +177,17 @@ class _Pet {
   final String especie;
   final String idade;
   final List<String> badgesPerfil;
+  final String? fotoBase64;
+
+  ImageProvider? get fotoProvider {
+    final base64 = fotoBase64;
+    if (base64 == null || base64.isEmpty) return null;
+    try {
+      return MemoryImage(base64Decode(base64));
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 const _mockPets = [
@@ -233,11 +248,11 @@ class _TopHeader extends StatelessWidget {
           bottomRight: Radius.circular(32),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: const Row(
         children: [
-          const PetVidaWordmark(),
-          const CircleAvatar(
+          SizedBox(width: 40, height: 40),
+          Expanded(child: Center(child: PetVidaLogo(size: 64))),
+          CircleAvatar(
             radius: 20,
             backgroundColor: Colors.white,
             child: Icon(Icons.person, color: AppColors.laranjaSolar),
@@ -328,14 +343,17 @@ class _PetListCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 36,
               backgroundColor: Colors.white,
-              child: Icon(
-                Icons.pets,
-                size: 32,
-                color: AppColors.laranjaTerracota,
-              ),
+              backgroundImage: pet.fotoProvider,
+              child: pet.fotoProvider == null
+                  ? const Icon(
+                      Icons.pets,
+                      size: 32,
+                      color: AppColors.laranjaTerracota,
+                    )
+                  : null,
             ),
             const SizedBox(width: 16),
             Expanded(
