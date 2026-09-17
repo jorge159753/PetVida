@@ -39,3 +39,22 @@
 - **Byron**: Definição das personas
 - **João Murilo**: criação dos slides
 - **Arthur Costa Ribeiro**: Pesquisa das problematicas
+
+
+#--------------------------------------------------------------------------------------------------#
+# Atividade 3 - Funcionalidade e Requisitos.
+
+## Turma 
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição da atividade
+
+- A atividade de hoje teve como objetivo realizar pesquisas sobre requisitos e funcionalidades do sistema PetVida, buscando identificar, organizar e documentar as principais funcionalidades, requisitos funcionais e não funcionais necessários para o desenvolvimento do sistema.
+
+
+## Responsabilidade de cada integrante nessa atividade
+- **Jorge Vitor, João Murilo**: Confecção dos slides 
+- **Byron**: Análise de requisitos funcionais e funcionalidades
+- **Arthur Costa Ribeiro**: Mapeamento e análise do CRUD
+- **Heitor**: Análise de requisitos não funcionais e funcionalidades
