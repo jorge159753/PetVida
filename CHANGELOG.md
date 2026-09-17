@@ -7,3 +7,8 @@
 
 ### Adicionado
 - Pesquisa, Benchmark e Personas.
+
+## [17/09/2026]
+
+### Adicionado
+-  Funcionalidades E Requisitos 
