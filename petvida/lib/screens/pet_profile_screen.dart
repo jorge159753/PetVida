@@ -91,6 +91,8 @@ class PetProfileScreen extends StatelessWidget {
         'numeroDoses': numeroDoses,
         'doseAtual': 1,
         'proximaDose': proximaDose,
+        'lote': dados['lote'],
+        'responsavel': dados['responsavel'],
         'createdAt': FieldValue.serverTimestamp(),
       });
       final id = petId;
@@ -123,6 +125,12 @@ class PetProfileScreen extends StatelessWidget {
     DocumentReference<Map<String, dynamic>> doc,
     Map<String, dynamic> data,
   ) async {
+    final dadosDose = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => const _RegistrarDoseVacinaDialog(),
+    );
+    if (dadosDose == null) return;
+
     final numeroDoses = (data['numeroDoses'] as num?)?.toInt() ?? 1;
     final frequenciaDias = (data['frequenciaDias'] as num?)?.toInt() ?? 0;
     final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
@@ -137,6 +145,8 @@ class PetProfileScreen extends StatelessWidget {
         'doseAtual': novaDose,
         'dataAplicacao': Timestamp.fromDate(agora),
         'proximaDose': proximaDose,
+        'lote': dadosDose['lote'],
+        'responsavel': dadosDose['responsavel'],
       });
       final id = petId;
       if (id != null) {
@@ -553,6 +563,8 @@ class _VaccineTile extends StatelessWidget {
     final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
     final proximaDoseTimestamp = data['proximaDose'] as Timestamp?;
     final protocoloCompleto = proximaDoseTimestamp == null;
+    final lote = (data['lote'] as String?)?.trim();
+    final responsavel = (data['responsavel'] as String?)?.trim();
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -589,6 +601,22 @@ class _VaccineTile extends StatelessWidget {
                         color: Colors.black54,
                       ),
                     ),
+                    if (lote != null && lote.isNotEmpty)
+                      Text(
+                        'Lote: $lote',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    if (responsavel != null && responsavel.isNotEmpty)
+                      Text(
+                        'Responsável: $responsavel',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -848,6 +876,8 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
   final _nomeController = TextEditingController();
   final _frequenciaController = TextEditingController(text: '365');
   final _numeroDosesController = TextEditingController(text: '1');
+  final _loteController = TextEditingController();
+  final _responsavelController = TextEditingController();
   DateTime _dataAplicacao = DateTime.now();
 
   @override
@@ -855,6 +885,8 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
     _nomeController.dispose();
     _frequenciaController.dispose();
     _numeroDosesController.dispose();
+    _loteController.dispose();
+    _responsavelController.dispose();
     super.dispose();
   }
 
@@ -877,6 +909,8 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
       'dataAplicacao': Timestamp.fromDate(_dataAplicacao),
       'frequenciaDias': int.parse(_frequenciaController.text.trim()),
       'numeroDoses': int.parse(_numeroDosesController.text.trim()),
+      'lote': _loteController.text.trim(),
+      'responsavel': _responsavelController.text.trim(),
     });
   }
 
@@ -893,60 +927,76 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
       ),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nomeController,
-              decoration: const InputDecoration(
-                labelText: 'Nome da vacina (ex: V10)',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nomeController,
+                decoration: const InputDecoration(
+                  labelText: 'Nome da vacina (ex: V10)',
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Digite o nome da vacina'
+                    : null,
               ),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Digite o nome da vacina'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Data de aplicação'),
-              subtitle: Text(_formatarData(_dataAplicacao)),
-              trailing: const Icon(
-                Icons.calendar_today,
-                color: AppColors.laranjaTerracota,
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Data de aplicação'),
+                subtitle: Text(_formatarData(_dataAplicacao)),
+                trailing: const Icon(
+                  Icons.calendar_today,
+                  color: AppColors.laranjaTerracota,
+                ),
+                onTap: _escolherData,
               ),
-              onTap: _escolherData,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _numeroDosesController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Número de doses',
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _numeroDosesController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Número de doses',
+                ),
+                validator: (value) {
+                  final numero = int.tryParse((value ?? '').trim());
+                  if (numero == null || numero < 1) {
+                    return 'Digite um número de doses válido';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                final numero = int.tryParse((value ?? '').trim());
-                if (numero == null || numero < 1) {
-                  return 'Digite um número de doses válido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _frequenciaController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Frequência entre doses (dias)',
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _frequenciaController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Frequência entre doses (dias)',
+                ),
+                validator: (value) {
+                  final numero = int.tryParse((value ?? '').trim());
+                  if (numero == null || numero < 1) {
+                    return 'Digite uma frequência válida em dias';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                final numero = int.tryParse((value ?? '').trim());
-                if (numero == null || numero < 1) {
-                  return 'Digite uma frequência válida em dias';
-                }
-                return null;
-              },
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _loteController,
+                decoration: const InputDecoration(
+                  labelText: 'Lote (ex: L2026-04)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _responsavelController,
+                decoration: const InputDecoration(
+                  labelText: 'Responsável pela aplicação',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -961,6 +1011,83 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
             foregroundColor: Colors.white,
           ),
           child: const Text('Salvar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Pede o lote e o responsável da nova dose ao registrar a aplicação de uma
+/// vacina já cadastrada (RF03: cada aplicação tem seu próprio lote e
+/// responsável, que podem mudar de uma dose para a outra).
+class _RegistrarDoseVacinaDialog extends StatefulWidget {
+  const _RegistrarDoseVacinaDialog();
+
+  @override
+  State<_RegistrarDoseVacinaDialog> createState() =>
+      _RegistrarDoseVacinaDialogState();
+}
+
+class _RegistrarDoseVacinaDialogState
+    extends State<_RegistrarDoseVacinaDialog> {
+  final _loteController = TextEditingController();
+  final _responsavelController = TextEditingController();
+
+  @override
+  void dispose() {
+    _loteController.dispose();
+    _responsavelController.dispose();
+    super.dispose();
+  }
+
+  void _handleConfirmar() {
+    Navigator.of(context).pop({
+      'lote': _loteController.text.trim(),
+      'responsavel': _responsavelController.text.trim(),
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.cremeSuave,
+      title: const Text(
+        'Registrar dose aplicada',
+        style: TextStyle(
+          color: AppColors.laranjaTerracota,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: _loteController,
+            decoration: const InputDecoration(
+              labelText: 'Lote (ex: L2026-04)',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _responsavelController,
+            decoration: const InputDecoration(
+              labelText: 'Responsável pela aplicação',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _handleConfirmar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.laranjaTerracota,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Confirmar'),
         ),
       ],
     );
