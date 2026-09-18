@@ -128,18 +128,19 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     }
   }
 
-  /// Instâncias públicas da Overpass API (todas gratuitas, sem chave).
-  /// Tentamos mais de uma porque a instância principal é conhecida por
-  /// ficar sobrecarregada/limitar requisições anônimas.
+  /// Instâncias públicas da Overpass API (todas gratuitas, sem chave),
+  /// usadas como reforço caso a Nominatim falhe.
   static const _overpassEndpoints = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
     'https://overpass.openstreetmap.ru/api/interpreter',
   ];
 
-  /// Busca clínicas veterinárias reais num raio de 8 km da localização do
-  /// usuário usando a Overpass API (dados livres do OpenStreetMap, sem
-  /// necessidade de chave/API paga).
+  /// Busca clínicas veterinárias reais num raio de ~8 km da localização do
+  /// usuário. Tenta primeiro a Nominatim (nominatim.openstreetmap.org — o
+  /// mesmo domínio dos tiles do mapa, que já se mostrou acessível) e só
+  /// recorre à Overpass API (domínios diferentes, mais sujeitos a bloqueio
+  /// de rede/firewall) se a Nominatim falhar.
   Future<void> _buscarClinicasProximas(double lat, double lng) async {
     if (mounted) {
       setState(() {
@@ -148,67 +149,25 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
       });
     }
 
-    final query =
-        '[out:json][timeout:10];'
-        '('
-        'node["amenity"="veterinary"](around:8000,$lat,$lng);'
-        'way["amenity"="veterinary"](around:8000,$lat,$lng);'
-        'relation["amenity"="veterinary"](around:8000,$lat,$lng);'
-        ');'
-        'out center 30;';
-
     Object? ultimoErro;
+
+    try {
+      final clinicas = await _buscarViaNominatim(lat, lng);
+      if (mounted) {
+        setState(() {
+          _clinics = clinicas;
+          _loadingClinics = false;
+        });
+        _atualizarCameraDoMapa();
+      }
+      return;
+    } catch (e) {
+      ultimoErro = e;
+    }
 
     for (final endpoint in _overpassEndpoints) {
       try {
-        final resposta = await http
-            .post(Uri.parse(endpoint), body: {'data': query})
-            .timeout(const Duration(seconds: 8));
-
-        if (resposta.statusCode != 200) {
-          throw Exception('$endpoint respondeu ${resposta.statusCode}');
-        }
-
-        final corpo = jsonDecode(resposta.body) as Map<String, dynamic>;
-        final elementos = corpo['elements'] as List<dynamic>? ?? [];
-        final clinicas = <_Clinic>[];
-
-        for (final elemento in elementos) {
-          final item = elemento as Map<String, dynamic>;
-          final tags = (item['tags'] as Map<String, dynamic>?) ?? {};
-          final center = item['center'] as Map<String, dynamic>?;
-          final clinicLat =
-              (item['lat'] as num?)?.toDouble() ??
-              (center?['lat'] as num?)?.toDouble();
-          final clinicLng =
-              (item['lon'] as num?)?.toDouble() ??
-              (center?['lon'] as num?)?.toDouble();
-          if (clinicLat == null || clinicLng == null) continue;
-
-          final rua = tags['addr:street'] as String?;
-          final numero = tags['addr:housenumber'] as String?;
-          final bairro = tags['addr:suburb'] as String?;
-          final partesEndereco = [
-            if (rua != null) (numero != null ? '$rua, $numero' : rua),
-            ?bairro,
-          ];
-
-          clinicas.add(
-            _Clinic(
-              nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
-              endereco: partesEndereco.isEmpty
-                  ? 'Endereço não informado'
-                  : partesEndereco.join(' - '),
-              telefone:
-                  (tags['phone'] as String?) ??
-                  (tags['contact:phone'] as String?) ??
-                  'Telefone não informado',
-              lat: clinicLat,
-              lng: clinicLng,
-            ),
-          );
-        }
-
+        final clinicas = await _buscarViaOverpass(endpoint, lat, lng);
         if (mounted) {
           setState(() {
             _clinics = clinicas;
@@ -223,19 +182,165 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
       }
     }
 
-    debugPrint('Falha ao buscar clínicas na Overpass API: $ultimoErro');
+    debugPrint('Falha ao buscar clínicas próximas: $ultimoErro');
     if (mounted) {
       final semSinal = ultimoErro is TimeoutException;
       setState(() {
         _clinicsError = semSinal
             ? 'Não foi possível buscar clínicas próximas. Essa rede pode '
-                  'estar bloqueando o acesso (comum em Wi-Fi de faculdade/'
-                  'empresa) — tente com dados móveis ou outra rede.'
+                  'estar bloqueando o acesso — tente com dados móveis ou '
+                  'outra rede.'
             : 'Não foi possível buscar clínicas próximas. '
                   'Verifique sua conexão com a internet e tente novamente.';
         _loadingClinics = false;
       });
     }
+  }
+
+  /// Busca via Nominatim, o serviço oficial de geocodificação/busca do
+  /// OpenStreetMap (nominatim.openstreetmap.org), usando a sintaxe de busca
+  /// estruturada por categoria (`q=[amenity=veterinary]`) limitada a uma
+  /// caixa delimitadora (`viewbox`) ao redor do usuário.
+  Future<List<_Clinic>> _buscarViaNominatim(double lat, double lng) async {
+    const raioGraus = 0.08; // ~8-9 km
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+      'format': 'json',
+      'limit': '30',
+      'addressdetails': '1',
+      'namedetails': '1',
+      'extratags': '1',
+      'bounded': '1',
+      'viewbox':
+          '${lng - raioGraus},${lat + raioGraus},'
+          '${lng + raioGraus},${lat - raioGraus}',
+      'q': '[amenity=veterinary]',
+    });
+
+    final resposta = await http
+        .get(
+          uri,
+          headers: const {
+            'User-Agent': 'PetVidaApp/1.0 (projeto academico PDM)',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (resposta.statusCode != 200) {
+      throw Exception('Nominatim respondeu ${resposta.statusCode}');
+    }
+
+    final lista = jsonDecode(resposta.body) as List<dynamic>;
+    final clinicas = <_Clinic>[];
+
+    for (final elemento in lista) {
+      final item = elemento as Map<String, dynamic>;
+      final clinicLat = double.tryParse((item['lat'] as String?) ?? '');
+      final clinicLng = double.tryParse((item['lon'] as String?) ?? '');
+      if (clinicLat == null || clinicLng == null) continue;
+
+      final namedetails = item['namedetails'] as Map<String, dynamic>?;
+      final nomeDireto = namedetails?['name'] as String?;
+      final displayName = item['display_name'] as String?;
+      final nome = (nomeDireto != null && nomeDireto.isNotEmpty)
+          ? nomeDireto
+          : (displayName?.split(',').first.trim() ?? 'Clínica Veterinária');
+
+      final address = (item['address'] as Map<String, dynamic>?) ?? {};
+      final rua = address['road'] as String?;
+      final numero = address['house_number'] as String?;
+      final bairro =
+          (address['suburb'] as String?) ??
+          (address['neighbourhood'] as String?);
+      final partesEndereco = [
+        if (rua != null) (numero != null ? '$rua, $numero' : rua),
+        ?bairro,
+      ];
+
+      final extratags = (item['extratags'] as Map<String, dynamic>?) ?? {};
+
+      clinicas.add(
+        _Clinic(
+          nome: nome,
+          endereco: partesEndereco.isEmpty
+              ? 'Endereço não informado'
+              : partesEndereco.join(' - '),
+          telefone:
+              (extratags['phone'] as String?) ??
+              (extratags['contact:phone'] as String?) ??
+              'Telefone não informado',
+          lat: clinicLat,
+          lng: clinicLng,
+        ),
+      );
+    }
+
+    return clinicas;
+  }
+
+  /// Busca via um espelho da Overpass API (usado como reforço).
+  Future<List<_Clinic>> _buscarViaOverpass(
+    String endpoint,
+    double lat,
+    double lng,
+  ) async {
+    final query =
+        '[out:json][timeout:10];'
+        '('
+        'node["amenity"="veterinary"](around:8000,$lat,$lng);'
+        'way["amenity"="veterinary"](around:8000,$lat,$lng);'
+        'relation["amenity"="veterinary"](around:8000,$lat,$lng);'
+        ');'
+        'out center 30;';
+
+    final resposta = await http
+        .post(Uri.parse(endpoint), body: {'data': query})
+        .timeout(const Duration(seconds: 8));
+
+    if (resposta.statusCode != 200) {
+      throw Exception('$endpoint respondeu ${resposta.statusCode}');
+    }
+
+    final corpo = jsonDecode(resposta.body) as Map<String, dynamic>;
+    final elementos = corpo['elements'] as List<dynamic>? ?? [];
+    final clinicas = <_Clinic>[];
+
+    for (final elemento in elementos) {
+      final item = elemento as Map<String, dynamic>;
+      final tags = (item['tags'] as Map<String, dynamic>?) ?? {};
+      final center = item['center'] as Map<String, dynamic>?;
+      final clinicLat =
+          (item['lat'] as num?)?.toDouble() ??
+          (center?['lat'] as num?)?.toDouble();
+      final clinicLng =
+          (item['lon'] as num?)?.toDouble() ??
+          (center?['lon'] as num?)?.toDouble();
+      if (clinicLat == null || clinicLng == null) continue;
+
+      final rua = tags['addr:street'] as String?;
+      final numero = tags['addr:housenumber'] as String?;
+      final bairro = tags['addr:suburb'] as String?;
+      final partesEndereco = [
+        if (rua != null) (numero != null ? '$rua, $numero' : rua),
+        ?bairro,
+      ];
+
+      clinicas.add(
+        _Clinic(
+          nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
+          endereco: partesEndereco.isEmpty
+              ? 'Endereço não informado'
+              : partesEndereco.join(' - '),
+          telefone:
+              (tags['phone'] as String?) ??
+              (tags['contact:phone'] as String?) ??
+              'Telefone não informado',
+          lat: clinicLat,
+          lng: clinicLng,
+        ),
+      );
+    }
+
+    return clinicas;
   }
 
   /// Move a câmera do mapa para refletir a localização real do usuário e/ou
