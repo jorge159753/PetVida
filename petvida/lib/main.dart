@@ -18,6 +18,7 @@ class PetVidaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'PetVida',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.laranjaArdente),

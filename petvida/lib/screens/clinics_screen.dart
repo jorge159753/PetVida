@@ -72,11 +72,42 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
         return;
       }
 
-      final posicao = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      // Mostra rapidamente a última localização conhecida pelo aparelho
+      // (quase instantânea) enquanto uma localização fresca é obtida, para
+      // o mapa não ficar parado no centro padrão durante a espera do GPS.
+      final ultimaConhecida = await Geolocator.getLastKnownPosition();
+      if (ultimaConhecida != null && mounted) {
+        setState(() {
+          _userLocation = ll.LatLng(
+            ultimaConhecida.latitude,
+            ultimaConhecida.longitude,
+          );
+        });
+        _atualizarCameraDoMapa();
+      }
+
+      Position posicao;
+      try {
+        posicao = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 12),
+          ),
+        );
+      } on TimeoutException {
+        // Sem sinal de GPS suficiente a tempo: fica com a última localização
+        // conhecida (se houver) em vez de travar o carregamento pra sempre.
+        if (ultimaConhecida == null) rethrow;
+        if (mounted) setState(() => _loadingLocation = false);
+        unawaited(
+          _buscarClinicasProximas(
+            ultimaConhecida.latitude,
+            ultimaConhecida.longitude,
+          ),
+        );
+        return;
+      }
+
       if (mounted) {
         setState(() {
           _userLocation = ll.LatLng(posicao.latitude, posicao.longitude);
