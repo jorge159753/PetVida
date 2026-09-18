@@ -20,6 +20,7 @@ class ClinicsScreen extends StatefulWidget {
 
 class _ClinicsScreenState extends State<ClinicsScreen> {
   final _searchController = TextEditingController();
+  final _mapController = MapController();
   String _query = '';
 
   static const _clinics = [
@@ -86,7 +87,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
 
       final posicao = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+          accuracy: LocationAccuracy.high,
         ),
       );
       if (mounted) {
@@ -94,6 +95,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
           _userLocation = ll.LatLng(posicao.latitude, posicao.longitude);
           _loadingLocation = false;
         });
+        _atualizarCameraDoMapa();
       }
     } catch (_) {
       if (mounted) {
@@ -103,6 +105,32 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
         });
       }
     }
+  }
+
+  /// Move a câmera do mapa para refletir a localização real do usuário e/ou
+  /// o resultado da busca atual, em vez de depender de `initialCenter`
+  /// (que o flutter_map só aplica na primeira renderização do mapa).
+  void _atualizarCameraDoMapa() {
+    final clinicasFiltradas = _filteredClinics;
+    final pontos = <ll.LatLng>[
+      ?_userLocation,
+      if (_query.isNotEmpty)
+        for (final clinic in clinicasFiltradas) ll.LatLng(clinic.lat, clinic.lng),
+    ];
+
+    if (pontos.isEmpty) return;
+
+    if (pontos.length == 1) {
+      _mapController.move(pontos.first, 15);
+      return;
+    }
+
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints(pontos),
+        padding: const EdgeInsets.fromLTRB(30, 30, 30, 30),
+      ),
+    );
   }
 
   double? _distanciaEmKm(_Clinic clinic) {
@@ -147,6 +175,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -260,7 +289,10 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _searchController,
-                        onChanged: (value) => setState(() => _query = value),
+                        onChanged: (value) {
+                          setState(() => _query = value);
+                          _atualizarCameraDoMapa();
+                        },
                         style: const TextStyle(color: AppColors.laranjaArdente),
                         decoration: InputDecoration(
                           hintText: 'Buscar clínicas ou campanhas...',
@@ -300,6 +332,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
                       ),
                       const SizedBox(height: 20),
                       _RealMap(
+                        mapController: _mapController,
                         clinics: _filteredClinics,
                         userLocation: _userLocation,
                         loading: _loadingLocation,
@@ -436,12 +469,14 @@ class _Campaign {
 
 class _RealMap extends StatelessWidget {
   const _RealMap({
+    required this.mapController,
     required this.clinics,
     required this.userLocation,
     required this.loading,
     required this.errorMessage,
   });
 
+  final MapController mapController;
   final List<_Clinic> clinics;
   final ll.LatLng? userLocation;
   final bool loading;
@@ -476,6 +511,7 @@ class _RealMap extends StatelessWidget {
           child: Stack(
             children: [
               FlutterMap(
+                mapController: mapController,
                 options: MapOptions(initialCenter: center, initialZoom: 13),
                 children: [
                   TileLayer(
