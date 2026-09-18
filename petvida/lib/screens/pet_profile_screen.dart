@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
@@ -235,6 +237,121 @@ class PetProfileScreen extends StatelessWidget {
     }
   }
 
+  /// Exporta o histórico de saúde do pet (vacinas e sintomas) como PDF
+  /// (RF09/F7), usando o pacote `printing` para abrir a folha de
+  /// compartilhamento/salvamento nativa do Android.
+  Future<void> _handleExportarHistoricoPdf(BuildContext context) async {
+    final doc = _petDocument;
+    if (doc == null) {
+      _showSnackBar(context, 'Não é possível exportar o histórico deste pet.');
+      return;
+    }
+
+    try {
+      final petSnapshot = await doc.get();
+      final petDados = petSnapshot.data() ?? {};
+      final nomePet = (petDados['nome'] as String?) ?? nome;
+      final especiePet = (petDados['especie'] as String?) ?? especie;
+      final idadePet = (petDados['idade'] as String?) ?? idade;
+      final pesoPet = (petDados['peso'] as String?) ?? peso;
+
+      final vacinasSnapshot = await doc
+          .collection('vacinas')
+          .orderBy('dataAplicacao', descending: true)
+          .get();
+
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final sintomasSnapshot = uid == null
+          ? null
+          : await FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .collection('sintomas')
+                .where('pet', isEqualTo: nomePet)
+                .orderBy('data', descending: true)
+                .get();
+
+      String dataOuTraco(Timestamp? timestamp) =>
+          timestamp == null ? '-' : _formatarData(timestamp.toDate());
+      String textoOuTraco(String? valor) =>
+          (valor != null && valor.trim().isNotEmpty) ? valor.trim() : '-';
+
+      final pdfDoc = pw.Document();
+      pdfDoc.addPage(
+        pw.MultiPage(
+          build: (pdfContext) => [
+            pw.Text(
+              'Histórico de Saúde - $nomePet',
+              style: pw.TextStyle(
+                fontSize: 22,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Text('Espécie: $especiePet   |   Idade: $idadePet   |   Peso: $pesoPet'),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Vacinas Registradas',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            if (vacinasSnapshot.docs.isEmpty)
+              pw.Text('Nenhuma vacina registrada.')
+            else
+              pw.TableHelper.fromTextArray(
+                headers: ['Vacina', 'Aplicada em', 'Dose', 'Lote', 'Responsável'],
+                data: [
+                  for (final vacinaDoc in vacinasSnapshot.docs)
+                    [
+                      textoOuTraco(vacinaDoc.data()['nome'] as String?),
+                      dataOuTraco(vacinaDoc.data()['dataAplicacao'] as Timestamp?),
+                      '${(vacinaDoc.data()['doseAtual'] as num?)?.toInt() ?? 1} de '
+                          '${(vacinaDoc.data()['numeroDoses'] as num?)?.toInt() ?? 1}',
+                      textoOuTraco(vacinaDoc.data()['lote'] as String?),
+                      textoOuTraco(vacinaDoc.data()['responsavel'] as String?),
+                    ],
+                ],
+              ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Diário de Sintomas',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            if (sintomasSnapshot == null || sintomasSnapshot.docs.isEmpty)
+              pw.Text('Nenhum sintoma registrado.')
+            else
+              pw.TableHelper.fromTextArray(
+                headers: ['Data', 'Sintoma', 'Severidade', 'Observações'],
+                data: [
+                  for (final sintomaDoc in sintomasSnapshot.docs)
+                    [
+                      dataOuTraco(sintomaDoc.data()['data'] as Timestamp?),
+                      textoOuTraco(sintomaDoc.data()['sintoma'] as String?),
+                      textoOuTraco(sintomaDoc.data()['severidade'] as String?),
+                      textoOuTraco(sintomaDoc.data()['anotacoes'] as String?),
+                    ],
+                ],
+              ),
+          ],
+        ),
+      );
+
+      final bytes = await pdfDoc.save();
+      await Printing.sharePdf(bytes: bytes, filename: 'historico_$nomePet.pdf');
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível exportar o histórico em PDF.');
+      }
+    }
+  }
+
   Future<void> _handleExcluir(BuildContext context) async {
     final doc = _petDocument;
     if (doc == null) {
@@ -408,6 +525,21 @@ class PetProfileScreen extends StatelessWidget {
                                   MedicamentosScreen(petId: id, nomePet: nome),
                             ),
                           );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _PetListItem(
+                        icon: Icons.picture_as_pdf,
+                        label: 'Exportar Histórico (PDF)',
+                        onTap: () {
+                          if (petId == null) {
+                            _showSnackBar(
+                              context,
+                              'Não é possível exportar o histórico deste pet.',
+                            );
+                            return;
+                          }
+                          _handleExportarHistoricoPdf(context);
                         },
                       ),
                       const SizedBox(height: 16),

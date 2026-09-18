@@ -21,6 +21,7 @@ void main() {
     expect(find.text('ADICIONAR VACINA'), findsOneWidget);
     expect(find.text('Histórico Médico'), findsOneWidget);
     expect(find.text('Medicamentos Atuais'), findsOneWidget);
+    expect(find.text('Exportar Histórico (PDF)'), findsOneWidget);
     expect(find.text('Configurações do Pet'), findsOneWidget);
   });
 
@@ -98,6 +99,22 @@ void main() {
 
       expect(
         find.text('Não é possível abrir os medicamentos deste pet.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'Tapping "Exportar Histórico (PDF)" without a petId tells the user it is unavailable',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: PetProfileScreen()));
+
+      await tester.ensureVisible(find.text('Exportar Histórico (PDF)'));
+      await tester.tap(find.text('Exportar Histórico (PDF)'));
+      await tester.pump();
+
+      expect(
+        find.text('Não é possível exportar o histórico deste pet.'),
         findsOneWidget,
       );
     },
