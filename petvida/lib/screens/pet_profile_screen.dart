@@ -260,16 +260,25 @@ class PetProfileScreen extends StatelessWidget {
           .orderBy('dataAplicacao', descending: true)
           .get();
 
+      // Sem orderBy na query: combinar where + orderBy em campos diferentes
+      // exigiria criar um índice composto no Firestore (não dá pra fazer
+      // isso por automação). Em vez disso, ordena a lista já em memória.
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      final sintomasSnapshot = uid == null
+      final sintomasDocsSnapshot = uid == null
           ? null
           : await FirebaseFirestore.instance
                 .collection('users')
                 .doc(uid)
                 .collection('sintomas')
                 .where('pet', isEqualTo: nomePet)
-                .orderBy('data', descending: true)
                 .get();
+      final sintomasDocs = (sintomasDocsSnapshot?.docs ?? []).toList()
+        ..sort((a, b) {
+          final dataA = a.data()['data'] as Timestamp?;
+          final dataB = b.data()['data'] as Timestamp?;
+          if (dataA == null || dataB == null) return 0;
+          return dataB.compareTo(dataA);
+        });
 
       String dataOuTraco(Timestamp? timestamp) =>
           timestamp == null ? '-' : _formatarData(timestamp.toDate());
@@ -324,13 +333,13 @@ class PetProfileScreen extends StatelessWidget {
               ),
             ),
             pw.SizedBox(height: 8),
-            if (sintomasSnapshot == null || sintomasSnapshot.docs.isEmpty)
+            if (sintomasDocs.isEmpty)
               pw.Text('Nenhum sintoma registrado.')
             else
               pw.TableHelper.fromTextArray(
                 headers: ['Data', 'Sintoma', 'Severidade', 'Observações'],
                 data: [
-                  for (final sintomaDoc in sintomasSnapshot.docs)
+                  for (final sintomaDoc in sintomasDocs)
                     [
                       dataOuTraco(sintomaDoc.data()['data'] as Timestamp?),
                       textoOuTraco(sintomaDoc.data()['sintoma'] as String?),
@@ -345,7 +354,8 @@ class PetProfileScreen extends StatelessWidget {
 
       final bytes = await pdfDoc.save();
       await Printing.sharePdf(bytes: bytes, filename: 'historico_$nomePet.pdf');
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Falha ao exportar histórico em PDF: $e');
       if (context.mounted) {
         _showSnackBar(context, 'Não foi possível exportar o histórico em PDF.');
       }
