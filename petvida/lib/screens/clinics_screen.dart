@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart' as ll;
 
 import '../theme/app_colors.dart';
@@ -23,29 +27,12 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   final _mapController = MapController();
   String _query = '';
 
-  static const _clinics = [
-    _Clinic(
-      nome: 'Clínica Veterinária Vida Animal',
-      endereco: 'Av. Paulista, 1200 - Bela Vista',
-      telefone: '(11) 3456-7890',
-      lat: -23.5629,
-      lng: -46.6544,
-    ),
-    _Clinic(
-      nome: 'Hospital Veterinário São Francisco',
-      endereco: 'Rua das Flores, 458 - Centro',
-      telefone: '(11) 2345-6789',
-      lat: -23.5505,
-      lng: -46.6333,
-    ),
-    _Clinic(
-      nome: 'Clínica Pet Amigo',
-      endereco: 'Rua Boa Vista, 320 - Jardim América',
-      telefone: '(11) 4567-8901',
-      lat: -23.5570,
-      lng: -46.6396,
-    ),
-  ];
+  /// Clínicas veterinárias reais próximas do usuário, buscadas na Overpass
+  /// API (OpenStreetMap) a partir da localização atual. Não há mais dados
+  /// fixos/mocados de São Paulo.
+  List<_Clinic> _clinics = [];
+  bool _loadingClinics = false;
+  String? _clinicsError;
 
   ll.LatLng? _userLocation;
   String? _locationError;
@@ -96,12 +83,104 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
           _loadingLocation = false;
         });
         _atualizarCameraDoMapa();
+        unawaited(
+          _buscarClinicasProximas(posicao.latitude, posicao.longitude),
+        );
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _locationError = 'Não foi possível obter sua localização.';
           _loadingLocation = false;
+        });
+      }
+    }
+  }
+
+  /// Busca clínicas veterinárias reais num raio de 8 km da localização do
+  /// usuário usando a Overpass API (dados livres do OpenStreetMap, sem
+  /// necessidade de chave/API paga).
+  Future<void> _buscarClinicasProximas(double lat, double lng) async {
+    if (mounted) {
+      setState(() {
+        _loadingClinics = true;
+        _clinicsError = null;
+      });
+    }
+
+    try {
+      final query =
+          '[out:json][timeout:20];'
+          '('
+          'node["amenity"="veterinary"](around:8000,$lat,$lng);'
+          'way["amenity"="veterinary"](around:8000,$lat,$lng);'
+          'relation["amenity"="veterinary"](around:8000,$lat,$lng);'
+          ');'
+          'out center 30;';
+
+      final resposta = await http
+          .post(
+            Uri.parse('https://overpass-api.de/api/interpreter'),
+            body: {'data': query},
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (resposta.statusCode != 200) {
+        throw Exception('Overpass respondeu ${resposta.statusCode}');
+      }
+
+      final corpo = jsonDecode(resposta.body) as Map<String, dynamic>;
+      final elementos = corpo['elements'] as List<dynamic>? ?? [];
+      final clinicas = <_Clinic>[];
+
+      for (final elemento in elementos) {
+        final item = elemento as Map<String, dynamic>;
+        final tags = (item['tags'] as Map<String, dynamic>?) ?? {};
+        final center = item['center'] as Map<String, dynamic>?;
+        final clinicLat =
+            (item['lat'] as num?)?.toDouble() ??
+            (center?['lat'] as num?)?.toDouble();
+        final clinicLng =
+            (item['lon'] as num?)?.toDouble() ??
+            (center?['lon'] as num?)?.toDouble();
+        if (clinicLat == null || clinicLng == null) continue;
+
+        final rua = tags['addr:street'] as String?;
+        final numero = tags['addr:housenumber'] as String?;
+        final bairro = tags['addr:suburb'] as String?;
+        final partesEndereco = [
+          if (rua != null) (numero != null ? '$rua, $numero' : rua),
+          ?bairro,
+        ];
+
+        clinicas.add(
+          _Clinic(
+            nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
+            endereco: partesEndereco.isEmpty
+                ? 'Endereço não informado'
+                : partesEndereco.join(' - '),
+            telefone:
+                (tags['phone'] as String?) ??
+                (tags['contact:phone'] as String?) ??
+                'Telefone não informado',
+            lat: clinicLat,
+            lng: clinicLng,
+          ),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _clinics = clinicas;
+          _loadingClinics = false;
+        });
+        _atualizarCameraDoMapa();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _clinicsError = 'Não foi possível buscar clínicas próximas.';
+          _loadingClinics = false;
         });
       }
     }
@@ -114,8 +193,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     final clinicasFiltradas = _filteredClinics;
     final pontos = <ll.LatLng>[
       ?_userLocation,
-      if (_query.isNotEmpty)
-        for (final clinic in clinicasFiltradas) ll.LatLng(clinic.lat, clinic.lng),
+      for (final clinic in clinicasFiltradas) ll.LatLng(clinic.lat, clinic.lng),
     ];
 
     if (pontos.isEmpty) return;
@@ -183,6 +261,15 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _handleTentarNovamenteClinicas() {
+    final location = _userLocation;
+    if (location == null) {
+      _carregarLocalizacao();
+      return;
+    }
+    _buscarClinicasProximas(location.latitude, location.longitude);
   }
 
   Future<void> _handleClinicTap(_Clinic clinic) async {
@@ -335,10 +422,67 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
                         mapController: _mapController,
                         clinics: _filteredClinics,
                         userLocation: _userLocation,
-                        loading: _loadingLocation,
+                        loading: _loadingLocation || _loadingClinics,
                         errorMessage: _locationError,
                       ),
                       const SizedBox(height: 20),
+                      if (_loadingClinics)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.laranjaTerracota,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Buscando clínicas perto de você...',
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (_clinicsError != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.wifi_off,
+                                size: 18,
+                                color: Colors.black54,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _clinicsError!,
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _handleTentarNovamenteClinicas,
+                                child: const Text('Tentar novamente'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (_userLocation != null &&
+                          _clinics.isEmpty &&
+                          _query.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            'Nenhuma clínica veterinária encontrada num raio de 8 km.',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        ),
                       for (final clinic in _filteredClinics)
                         _ClinicCard(
                           clinic: clinic,

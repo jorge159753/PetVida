@@ -15,7 +15,13 @@ void main() {
         });
   });
 
-  testWidgets('ClinicsScreen shows search bar, clinics and campaigns', (
+  // Sem o plugin de geolocalização/rede disponível no ambiente de teste, a
+  // tela nunca consegue buscar clínicas reais (Overpass API) — o que é
+  // esperado, já que não há mais dados mocados de São Paulo como fallback.
+  // Os testes abaixo cobrem a estrutura da tela e a busca/campanhas, que
+  // continuam funcionando independentemente da geolocalização.
+
+  testWidgets('ClinicsScreen shows search bar and campaigns', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
@@ -23,25 +29,21 @@ void main() {
 
     expect(find.text('Clínicas e Campanhas'), findsOneWidget);
     expect(find.text('Buscar clínicas ou campanhas...'), findsOneWidget);
-    expect(find.text('Clínica Veterinária Vida Animal'), findsOneWidget);
-    expect(find.text('Hospital Veterinário São Francisco'), findsOneWidget);
-    expect(find.text('Clínica Pet Amigo'), findsOneWidget);
     expect(find.text('Vacinação Antirrábica 2026'), findsOneWidget);
     expect(find.text('Mutirão de Castração'), findsOneWidget);
     expect(find.text('Saiba Mais'), findsNWidgets(2));
   });
 
-  testWidgets('Searching filters clinics and campaigns by name', (
+  testWidgets('Searching filters campaigns by name', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
     await tester.pump();
 
-    await tester.enterText(find.byType(TextField), 'Amigo');
+    await tester.enterText(find.byType(TextField), 'Castração');
     await tester.pump();
 
-    expect(find.text('Clínica Pet Amigo'), findsOneWidget);
-    expect(find.text('Clínica Veterinária Vida Animal'), findsNothing);
+    expect(find.text('Mutirão de Castração'), findsOneWidget);
     expect(find.text('Vacinação Antirrábica 2026'), findsNothing);
   });
 
@@ -74,23 +76,5 @@ void main() {
 
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Fechar'), findsOneWidget);
-  });
-
-  testWidgets('Tapping a clinic card copies its info and shows a snack bar', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
-    await tester.pump();
-
-    await tester.scrollUntilVisible(
-      find.text('Clínica Pet Amigo').last,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Clínica Pet Amigo').last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.text('Informações da clínica copiadas!'), findsOneWidget);
   });
 }
