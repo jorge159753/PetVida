@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/reminder_status.dart';
 import '../widgets/paw_prints_background.dart';
@@ -72,6 +73,20 @@ class MedicamentosScreen extends StatelessWidget {
         'numero': 1,
         'dataAplicacao': Timestamp.fromDate(agora),
       });
+      if (proximaDose != null) {
+        try {
+          await NotificationService.instance.agendarLembreteMedicamento(
+            petId: petId,
+            medicamentoId: doc.id,
+            nomePet: nomePet,
+            nomeMedicamento: dados['nome'] as String,
+            proximaDose: proximaDose.toDate(),
+          );
+        } catch (_) {
+          // O medicamento já foi salvo; falha ao agendar o lembrete local
+          // não deve impedir o fluxo principal.
+        }
+      }
       if (context.mounted) {
         _showSnackBar(context, 'Medicamento adicionado com sucesso!');
       }
@@ -105,6 +120,24 @@ class MedicamentosScreen extends StatelessWidget {
         'numero': novaDose,
         'dataAplicacao': Timestamp.fromDate(agora),
       });
+      try {
+        if (proximaDose != null) {
+          await NotificationService.instance.agendarLembreteMedicamento(
+            petId: petId,
+            medicamentoId: doc.id,
+            nomePet: nomePet,
+            nomeMedicamento: (data['nome'] as String?) ?? 'Medicamento',
+            proximaDose: proximaDose.toDate(),
+          );
+        } else {
+          await NotificationService.instance.cancelarLembreteMedicamento(
+            petId,
+            doc.id,
+          );
+        }
+      } catch (_) {
+        // Não afeta o registro da dose, que já foi salvo com sucesso.
+      }
       if (context.mounted) {
         _showSnackBar(context, 'Dose registrada com sucesso!');
       }
@@ -168,6 +201,14 @@ class MedicamentosScreen extends StatelessWidget {
     if (confirmar != true) return;
     try {
       await doc.delete();
+      try {
+        await NotificationService.instance.cancelarLembreteMedicamento(
+          petId,
+          doc.id,
+        );
+      } catch (_) {
+        // A remoção do medicamento não deve falhar por causa do lembrete.
+      }
     } catch (_) {
       if (context.mounted) {
         _showSnackBar(context, 'Não foi possível remover o medicamento.');

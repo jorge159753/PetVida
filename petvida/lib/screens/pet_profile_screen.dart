@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/reminder_status.dart';
 import '../widgets/paw_prints_background.dart';
@@ -81,7 +82,7 @@ class PetProfileScreen extends StatelessWidget {
               dataAplicacao.toDate().add(Duration(days: frequenciaDias)),
             )
           : null;
-      await collection.add({
+      final vacinaDoc = await collection.add({
         'nome': dados['nome'],
         'dataAplicacao': dataAplicacao,
         'frequenciaDias': frequenciaDias,
@@ -90,6 +91,21 @@ class PetProfileScreen extends StatelessWidget {
         'proximaDose': proximaDose,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      final id = petId;
+      if (proximaDose != null && id != null) {
+        try {
+          await NotificationService.instance.agendarLembreteVacina(
+            petId: id,
+            vacinaId: vacinaDoc.id,
+            nomePet: nome,
+            nomeVacina: dados['nome'] as String,
+            proximaDose: proximaDose.toDate(),
+          );
+        } catch (_) {
+          // A vacina já foi salva; a falha ao agendar o lembrete local não
+          // deve impedir o fluxo principal nem ser reportada como erro.
+        }
+      }
       if (context.mounted) {
         _showSnackBar(context, 'Vacina adicionada com sucesso!');
       }
@@ -120,6 +136,27 @@ class PetProfileScreen extends StatelessWidget {
         'dataAplicacao': Timestamp.fromDate(agora),
         'proximaDose': proximaDose,
       });
+      final id = petId;
+      if (id != null) {
+        try {
+          if (proximaDose != null) {
+            await NotificationService.instance.agendarLembreteVacina(
+              petId: id,
+              vacinaId: doc.id,
+              nomePet: nome,
+              nomeVacina: (data['nome'] as String?) ?? 'Vacina',
+              proximaDose: proximaDose.toDate(),
+            );
+          } else {
+            await NotificationService.instance.cancelarLembreteVacina(
+              id,
+              doc.id,
+            );
+          }
+        } catch (_) {
+          // Não afeta o registro da dose, que já foi salvo com sucesso.
+        }
+      }
       if (context.mounted) {
         _showSnackBar(context, 'Dose registrada com sucesso!');
       }
@@ -225,9 +262,20 @@ class PetProfileScreen extends StatelessWidget {
     if (confirmar != true) return;
 
     try {
+      final id = petId;
       final vacinas = await doc.collection('vacinas').get();
       for (final vacinaDoc in vacinas.docs) {
         await vacinaDoc.reference.delete();
+        if (id != null) {
+          try {
+            await NotificationService.instance.cancelarLembreteVacina(
+              id,
+              vacinaDoc.id,
+            );
+          } catch (_) {
+            // A exclusão do pet não deve falhar por causa do lembrete local.
+          }
+        }
       }
       await doc.delete();
       if (context.mounted) Navigator.of(context).pop();
