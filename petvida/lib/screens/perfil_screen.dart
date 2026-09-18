@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/paw_prints_background.dart';
 import '../widgets/petvida_logo.dart';
@@ -12,10 +15,19 @@ import 'timeline_screen.dart';
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
 
-  String get _email => FirebaseAuth.instance.currentUser?.email ?? '';
+  String get _email {
+    if (Firebase.apps.isEmpty) return '';
+    return FirebaseAuth.instance.currentUser?.email ?? '';
+  }
 
   void _abrirTela(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _handleSair(BuildContext context) async {
@@ -55,6 +67,26 @@ class PerfilScreen extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
+  }
+
+  Future<void> _handleExcluirConta(BuildContext context) async {
+    if (Firebase.apps.isEmpty || FirebaseAuth.instance.currentUser == null) {
+      _showSnackBar(context, 'Não é possível excluir a conta agora.');
+      return;
+    }
+
+    final sucesso = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _DeleteAccountDialog(),
+    );
+
+    if (sucesso == true && context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -128,6 +160,29 @@ class PerfilScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _handleExcluirConta(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          icon: const Icon(Icons.delete_forever),
+                          label: const Text(
+                            'Excluir conta',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -160,6 +215,192 @@ class PerfilScreen extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
+    );
+  }
+}
+
+/// Confirmação de exclusão definitiva da conta (RF12/RNF03 - LGPD): pede a
+/// senha do tutor para reautenticar (exigência do Firebase para operações
+/// sensíveis), apaga todos os dados do tutor e dos pets no Firestore, cancela
+/// os lembretes locais pendentes e por fim exclui a conta do Firebase Auth.
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _senhaController = TextEditingController();
+  bool _processando = false;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _senhaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _excluirColecao(
+    CollectionReference<Map<String, dynamic>> colecao,
+  ) async {
+    final snapshot = await colecao.get();
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
+  Future<void> _excluirTodosOsDados(String uid) async {
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+
+    final petsSnapshot = await userDoc.collection('pets').get();
+    for (final petDoc in petsSnapshot.docs) {
+      await _excluirColecao(petDoc.reference.collection('vacinas'));
+
+      final medicamentosSnapshot = await petDoc.reference
+          .collection('medicamentos')
+          .get();
+      for (final medDoc in medicamentosSnapshot.docs) {
+        await _excluirColecao(medDoc.reference.collection('doses'));
+        await medDoc.reference.delete();
+      }
+
+      await _excluirColecao(petDoc.reference.collection('historico'));
+      await petDoc.reference.delete();
+    }
+
+    await _excluirColecao(userDoc.collection('sintomas'));
+    await _excluirColecao(userDoc.collection('eventos'));
+
+    await userDoc.delete();
+  }
+
+  Future<void> _handleConfirmar() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _processando = true;
+      _erro = null;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) {
+      setState(() {
+        _processando = false;
+        _erro = 'Não foi possível identificar a conta atual.';
+      });
+      return;
+    }
+
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: _senhaController.text,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      await _excluirTodosOsDados(user.uid);
+
+      try {
+        await NotificationService.instance.cancelarTudo();
+      } catch (_) {
+        // Não impede a exclusão da conta.
+      }
+
+      await user.delete();
+
+      if (mounted) Navigator.of(context).pop(true);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _processando = false;
+        _erro = switch (e.code) {
+          'wrong-password' ||
+          'invalid-credential' => 'Senha incorreta.',
+          'too-many-requests' =>
+            'Muitas tentativas. Tente novamente mais tarde.',
+          _ => 'Não foi possível excluir a conta (${e.code}).',
+        };
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _processando = false;
+        _erro =
+            'Não foi possível excluir a conta. Verifique sua conexão e '
+            'tente novamente.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.cremeSuave,
+      title: const Text(
+        'Excluir conta',
+        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+      ),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Isso apaga permanentemente sua conta e todos os dados dos '
+              'seus pets (vacinas, medicamentos, sintomas e linha do '
+              'tempo). Essa ação não pode ser desfeita.',
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _senhaController,
+              obscureText: true,
+              enabled: !_processando,
+              decoration: const InputDecoration(
+                labelText: 'Confirme sua senha',
+              ),
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Digite sua senha para confirmar'
+                  : null,
+            ),
+            if (_erro != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _erro!,
+                style: const TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ],
+            if (_processando) ...[
+              const SizedBox(height: 16),
+              const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _processando
+              ? null
+              : () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _processando ? null : _handleConfirmar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Excluir tudo'),
+        ),
+      ],
     );
   }
 }

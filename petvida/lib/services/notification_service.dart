@@ -138,6 +138,13 @@ class NotificationService {
     await initialize();
     await _plugin.cancel(id: _idMedicamento(petId, medicamentoId));
   }
+
+  /// Cancela todos os lembretes agendados no aparelho — usado ao excluir a
+  /// conta do tutor (LGPD/RF12), pra não deixar notificações órfãs.
+  Future<void> cancelarTudo() async {
+    await initialize();
+    await _plugin.cancelAll();
+  }
 }
 
 String _formatarData(DateTime data) {
