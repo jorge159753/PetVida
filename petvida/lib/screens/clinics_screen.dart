@@ -128,6 +128,15 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     }
   }
 
+  /// Instâncias públicas da Overpass API (todas gratuitas, sem chave).
+  /// Tentamos mais de uma porque a instância principal é conhecida por
+  /// ficar sobrecarregada/limitar requisições anônimas.
+  static const _overpassEndpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.ru/api/interpreter',
+  ];
+
   /// Busca clínicas veterinárias reais num raio de 8 km da localização do
   /// usuário usando a Overpass API (dados livres do OpenStreetMap, sem
   /// necessidade de chave/API paga).
@@ -139,81 +148,89 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
       });
     }
 
-    try {
-      final query =
-          '[out:json][timeout:20];'
-          '('
-          'node["amenity"="veterinary"](around:8000,$lat,$lng);'
-          'way["amenity"="veterinary"](around:8000,$lat,$lng);'
-          'relation["amenity"="veterinary"](around:8000,$lat,$lng);'
-          ');'
-          'out center 30;';
+    final query =
+        '[out:json][timeout:25];'
+        '('
+        'node["amenity"="veterinary"](around:8000,$lat,$lng);'
+        'way["amenity"="veterinary"](around:8000,$lat,$lng);'
+        'relation["amenity"="veterinary"](around:8000,$lat,$lng);'
+        ');'
+        'out center 30;';
 
-      final resposta = await http
-          .post(
-            Uri.parse('https://overpass-api.de/api/interpreter'),
-            body: {'data': query},
-          )
-          .timeout(const Duration(seconds: 20));
+    Object? ultimoErro;
 
-      if (resposta.statusCode != 200) {
-        throw Exception('Overpass respondeu ${resposta.statusCode}');
+    for (final endpoint in _overpassEndpoints) {
+      try {
+        final resposta = await http
+            .post(Uri.parse(endpoint), body: {'data': query})
+            .timeout(const Duration(seconds: 25));
+
+        if (resposta.statusCode != 200) {
+          throw Exception('$endpoint respondeu ${resposta.statusCode}');
+        }
+
+        final corpo = jsonDecode(resposta.body) as Map<String, dynamic>;
+        final elementos = corpo['elements'] as List<dynamic>? ?? [];
+        final clinicas = <_Clinic>[];
+
+        for (final elemento in elementos) {
+          final item = elemento as Map<String, dynamic>;
+          final tags = (item['tags'] as Map<String, dynamic>?) ?? {};
+          final center = item['center'] as Map<String, dynamic>?;
+          final clinicLat =
+              (item['lat'] as num?)?.toDouble() ??
+              (center?['lat'] as num?)?.toDouble();
+          final clinicLng =
+              (item['lon'] as num?)?.toDouble() ??
+              (center?['lon'] as num?)?.toDouble();
+          if (clinicLat == null || clinicLng == null) continue;
+
+          final rua = tags['addr:street'] as String?;
+          final numero = tags['addr:housenumber'] as String?;
+          final bairro = tags['addr:suburb'] as String?;
+          final partesEndereco = [
+            if (rua != null) (numero != null ? '$rua, $numero' : rua),
+            ?bairro,
+          ];
+
+          clinicas.add(
+            _Clinic(
+              nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
+              endereco: partesEndereco.isEmpty
+                  ? 'Endereço não informado'
+                  : partesEndereco.join(' - '),
+              telefone:
+                  (tags['phone'] as String?) ??
+                  (tags['contact:phone'] as String?) ??
+                  'Telefone não informado',
+              lat: clinicLat,
+              lng: clinicLng,
+            ),
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _clinics = clinicas;
+            _loadingClinics = false;
+          });
+          _atualizarCameraDoMapa();
+        }
+        return;
+      } catch (e) {
+        ultimoErro = e;
+        // Tenta o próximo espelho da Overpass API antes de desistir.
       }
+    }
 
-      final corpo = jsonDecode(resposta.body) as Map<String, dynamic>;
-      final elementos = corpo['elements'] as List<dynamic>? ?? [];
-      final clinicas = <_Clinic>[];
-
-      for (final elemento in elementos) {
-        final item = elemento as Map<String, dynamic>;
-        final tags = (item['tags'] as Map<String, dynamic>?) ?? {};
-        final center = item['center'] as Map<String, dynamic>?;
-        final clinicLat =
-            (item['lat'] as num?)?.toDouble() ??
-            (center?['lat'] as num?)?.toDouble();
-        final clinicLng =
-            (item['lon'] as num?)?.toDouble() ??
-            (center?['lon'] as num?)?.toDouble();
-        if (clinicLat == null || clinicLng == null) continue;
-
-        final rua = tags['addr:street'] as String?;
-        final numero = tags['addr:housenumber'] as String?;
-        final bairro = tags['addr:suburb'] as String?;
-        final partesEndereco = [
-          if (rua != null) (numero != null ? '$rua, $numero' : rua),
-          ?bairro,
-        ];
-
-        clinicas.add(
-          _Clinic(
-            nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
-            endereco: partesEndereco.isEmpty
-                ? 'Endereço não informado'
-                : partesEndereco.join(' - '),
-            telefone:
-                (tags['phone'] as String?) ??
-                (tags['contact:phone'] as String?) ??
-                'Telefone não informado',
-            lat: clinicLat,
-            lng: clinicLng,
-          ),
-        );
-      }
-
-      if (mounted) {
-        setState(() {
-          _clinics = clinicas;
-          _loadingClinics = false;
-        });
-        _atualizarCameraDoMapa();
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _clinicsError = 'Não foi possível buscar clínicas próximas.';
-          _loadingClinics = false;
-        });
-      }
+    debugPrint('Falha ao buscar clínicas na Overpass API: $ultimoErro');
+    if (mounted) {
+      setState(() {
+        _clinicsError =
+            'Não foi possível buscar clínicas próximas. '
+            'Verifique sua conexão com a internet e tente novamente.';
+        _loadingClinics = false;
+      });
     }
   }
 
