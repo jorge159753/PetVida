@@ -53,16 +53,24 @@ class MedicamentosScreen extends StatelessWidget {
 
     try {
       final frequenciaHoras = dados['frequenciaHoras'] as int;
+      final numeroDoses = dados['numeroDoses'] as int;
       final agora = DateTime.now();
-      await collection.add({
+      final proximaDose = numeroDoses > 1
+          ? Timestamp.fromDate(agora.add(Duration(hours: frequenciaHoras)))
+          : null;
+      final doc = await collection.add({
         'nome': dados['nome'],
         'dosagem': dados['dosagem'],
         'frequenciaHoras': frequenciaHoras,
+        'numeroDoses': numeroDoses,
+        'doseAtual': 1,
         'ultimaDose': Timestamp.fromDate(agora),
-        'proximaDose': Timestamp.fromDate(
-          agora.add(Duration(hours: frequenciaHoras)),
-        ),
+        'proximaDose': proximaDose,
         'createdAt': FieldValue.serverTimestamp(),
+      });
+      await doc.collection('doses').add({
+        'numero': 1,
+        'dataAplicacao': Timestamp.fromDate(agora),
       });
       if (context.mounted) {
         _showSnackBar(context, 'Medicamento adicionado com sucesso!');
@@ -79,14 +87,23 @@ class MedicamentosScreen extends StatelessWidget {
     DocumentReference<Map<String, dynamic>> doc,
     Map<String, dynamic> data,
   ) async {
+    final numeroDoses = (data['numeroDoses'] as num?)?.toInt() ?? 1;
     final frequenciaHoras = (data['frequenciaHoras'] as num?)?.toInt() ?? 0;
+    final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
+    final novaDose = doseAtual + 1;
     final agora = DateTime.now();
+    final proximaDose = novaDose < numeroDoses
+        ? Timestamp.fromDate(agora.add(Duration(hours: frequenciaHoras)))
+        : null;
     try {
       await doc.update({
+        'doseAtual': novaDose,
         'ultimaDose': Timestamp.fromDate(agora),
-        'proximaDose': Timestamp.fromDate(
-          agora.add(Duration(hours: frequenciaHoras)),
-        ),
+        'proximaDose': proximaDose,
+      });
+      await doc.collection('doses').add({
+        'numero': novaDose,
+        'dataAplicacao': Timestamp.fromDate(agora),
       });
       if (context.mounted) {
         _showSnackBar(context, 'Dose registrada com sucesso!');
@@ -96,6 +113,30 @@ class MedicamentosScreen extends StatelessWidget {
         _showSnackBar(context, 'Não foi possível registrar a dose.');
       }
     }
+  }
+
+  void _handleVerDoses(
+    BuildContext context,
+    DocumentReference<Map<String, dynamic>> doc,
+    Map<String, dynamic> data,
+  ) {
+    final nome = (data['nome'] as String?) ?? 'Medicamento';
+    final numeroDoses = (data['numeroDoses'] as num?)?.toInt() ?? 1;
+    final frequenciaHoras = (data['frequenciaHoras'] as num?)?.toInt() ?? 0;
+    final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
+    final ultimaDoseTimestamp = data['ultimaDose'] as Timestamp?;
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => _DosesDialog(
+        nome: nome,
+        numeroDoses: numeroDoses,
+        frequenciaHoras: frequenciaHoras,
+        doseAtual: doseAtual,
+        ultimaDose: ultimaDoseTimestamp?.toDate() ?? DateTime.now(),
+        dosesCollection: doc.collection('doses'),
+      ),
+    );
   }
 
   Future<void> _handleExcluir(
@@ -230,6 +271,11 @@ class MedicamentosScreen extends StatelessWidget {
                                           doc.reference,
                                           doc.data(),
                                         ),
+                                    onVerDoses: () => _handleVerDoses(
+                                      context,
+                                      doc.reference,
+                                      doc.data(),
+                                    ),
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -273,18 +319,24 @@ class _MedicamentoTile extends StatelessWidget {
     required this.data,
     required this.onExcluir,
     required this.onRegistrarDose,
+    required this.onVerDoses,
   });
 
   final Map<String, dynamic> data;
   final VoidCallback onExcluir;
   final VoidCallback onRegistrarDose;
+  final VoidCallback onVerDoses;
 
   @override
   Widget build(BuildContext context) {
     final nome = (data['nome'] as String?) ?? 'Medicamento';
     final dosagem = (data['dosagem'] as String?) ?? '';
     final frequenciaHoras = (data['frequenciaHoras'] as num?)?.toInt();
+    final numeroDoses = (data['numeroDoses'] as num?)?.toInt();
+    final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
     final proximaDoseTimestamp = data['proximaDose'] as Timestamp?;
+    final protocoloCompleto =
+        numeroDoses != null && proximaDoseTimestamp == null;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -330,6 +382,14 @@ class _MedicamentoTile extends StatelessWidget {
                           color: Colors.black54,
                         ),
                       ),
+                    if (numeroDoses != null)
+                      Text(
+                        'Dose $doseAtual de $numeroDoses',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -339,8 +399,13 @@ class _MedicamentoTile extends StatelessWidget {
               ),
             ],
           ),
-          if (proximaDoseTimestamp != null) ...[
-            const SizedBox(height: 8),
+          const SizedBox(height: 8),
+          if (protocoloCompleto)
+            const ReminderBadge(
+              text: 'Protocolo completo',
+              color: Colors.green,
+            )
+          else if (proximaDoseTimestamp != null)
             Row(
               children: [
                 Expanded(
@@ -359,19 +424,34 @@ class _MedicamentoTile extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onRegistrarDose,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.laranjaTerracota,
-                  side: const BorderSide(color: AppColors.laranjaTerracota),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onVerDoses,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.laranjaTerracota,
+                    side: const BorderSide(color: AppColors.laranjaTerracota),
+                  ),
+                  child: const Text('Ver doses'),
                 ),
-                child: const Text('Registrar dose administrada'),
               ),
-            ),
-          ],
+              if (!protocoloCompleto && proximaDoseTimestamp != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onRegistrarDose,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.laranjaTerracota,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Registrar dose'),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -390,12 +470,14 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
   final _nomeController = TextEditingController();
   final _dosagemController = TextEditingController();
   final _frequenciaController = TextEditingController(text: '12');
+  final _numeroDosesController = TextEditingController(text: '1');
 
   @override
   void dispose() {
     _nomeController.dispose();
     _dosagemController.dispose();
     _frequenciaController.dispose();
+    _numeroDosesController.dispose();
     super.dispose();
   }
 
@@ -405,6 +487,7 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
       'nome': _nomeController.text.trim(),
       'dosagem': _dosagemController.text.trim(),
       'frequenciaHoras': int.parse(_frequenciaController.text.trim()),
+      'numeroDoses': int.parse(_numeroDosesController.text.trim()),
     });
   }
 
@@ -453,6 +536,20 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
                 return null;
               },
             ),
+            TextFormField(
+              controller: _numeroDosesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quantidade de doses',
+              ),
+              validator: (value) {
+                final numero = int.tryParse((value ?? '').trim());
+                if (numero == null || numero < 1) {
+                  return 'Digite uma quantidade de doses válida';
+                }
+                return null;
+              },
+            ),
           ],
         ),
       ),
@@ -468,6 +565,132 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
             foregroundColor: Colors.white,
           ),
           child: const Text('Salvar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Mostra todas as doses de um medicamento (1..numeroDoses), indicando
+/// quais já foram dadas (com data/hora real registrada) e quais ainda
+/// faltam (com a data prevista, calculada a partir da frequência).
+class _DosesDialog extends StatelessWidget {
+  const _DosesDialog({
+    required this.nome,
+    required this.numeroDoses,
+    required this.frequenciaHoras,
+    required this.doseAtual,
+    required this.ultimaDose,
+    required this.dosesCollection,
+  });
+
+  final String nome;
+  final int numeroDoses;
+  final int frequenciaHoras;
+  final int doseAtual;
+  final DateTime ultimaDose;
+  final CollectionReference<Map<String, dynamic>> dosesCollection;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.cremeSuave,
+      title: Text(
+        'Doses de $nome',
+        style: const TextStyle(
+          color: AppColors.laranjaTerracota,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: dosesCollection.orderBy('numero').snapshots(),
+          builder: (context, snapshot) {
+            final dadas = <int, DateTime>{
+              for (final doc in snapshot.data?.docs ?? [])
+                (doc.data()['numero'] as num).toInt():
+                    (doc.data()['dataAplicacao'] as Timestamp).toDate(),
+            };
+
+            return ListView.separated(
+              shrinkWrap: true,
+              itemCount: numeroDoses,
+              separatorBuilder: (_, _) => const Divider(height: 20),
+              itemBuilder: (context, index) {
+                final numero = index + 1;
+                final dataDada = dadas[numero];
+
+                if (dataDada != null) {
+                  return _DoseRow(
+                    numero: numero,
+                    total: numeroDoses,
+                    texto: 'Dada em ${formatarDataHora(dataDada)}',
+                    dada: true,
+                  );
+                }
+
+                final prevista = ultimaDose.add(
+                  Duration(hours: frequenciaHoras * (numero - doseAtual)),
+                );
+                return _DoseRow(
+                  numero: numero,
+                  total: numeroDoses,
+                  texto: 'Prevista para ${formatarDataHora(prevista)}',
+                  dada: false,
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Fechar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DoseRow extends StatelessWidget {
+  const _DoseRow({
+    required this.numero,
+    required this.total,
+    required this.texto,
+    required this.dada,
+  });
+
+  final int numero;
+  final int total;
+  final String texto;
+  final bool dada;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          dada ? Icons.check_circle : Icons.schedule,
+          color: dada ? Colors.green.shade600 : Colors.black38,
+          size: 22,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dose $numero de $total',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                texto,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
       ],
     );
