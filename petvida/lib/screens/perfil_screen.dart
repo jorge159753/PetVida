@@ -15,8 +15,14 @@ import 'timeline_screen.dart';
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
 
-  String get _email {
+  bool get _isAnonimo {
+    if (Firebase.apps.isEmpty) return false;
+    return FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
+  }
+
+  String get _rotuloConta {
     if (Firebase.apps.isEmpty) return '';
+    if (_isAnonimo) return 'Modo Anônimo';
     return FirebaseAuth.instance.currentUser?.email ?? '';
   }
 
@@ -31,6 +37,7 @@ class PerfilScreen extends StatelessWidget {
   }
 
   Future<void> _handleSair(BuildContext context) async {
+    final anonimo = _isAnonimo;
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -42,7 +49,13 @@ class PerfilScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        content: const Text('Tem certeza que deseja sair?'),
+        content: Text(
+          anonimo
+              ? 'Você está em Modo Anônimo. Ao sair, você perde o acesso a '
+                    'todos os pets e dados cadastrados nesta sessão — não há '
+                    'como recuperá-los depois. Tem certeza que deseja sair?'
+              : 'Tem certeza que deseja sair?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -78,7 +91,7 @@ class PerfilScreen extends StatelessWidget {
     final sucesso = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const _DeleteAccountDialog(),
+      builder: (_) => _DeleteAccountDialog(isAnonimo: _isAnonimo),
     );
 
     if (sucesso == true && context.mounted) {
@@ -129,7 +142,7 @@ class PerfilScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        _email,
+                        _rotuloConta,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 16,
@@ -224,7 +237,9 @@ class PerfilScreen extends StatelessWidget {
 /// sensíveis), apaga todos os dados do tutor e dos pets no Firestore, cancela
 /// os lembretes locais pendentes e por fim exclui a conta do Firebase Auth.
 class _DeleteAccountDialog extends StatefulWidget {
-  const _DeleteAccountDialog();
+  const _DeleteAccountDialog({required this.isAnonimo});
+
+  final bool isAnonimo;
 
   @override
   State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
@@ -277,7 +292,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   }
 
   Future<void> _handleConfirmar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!widget.isAnonimo && !_formKey.currentState!.validate()) return;
 
     setState(() {
       _processando = true;
@@ -285,7 +300,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
     });
 
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.email == null) {
+    if (user == null || (!widget.isAnonimo && user.email == null)) {
       setState(() {
         _processando = false;
         _erro = 'Não foi possível identificar a conta atual.';
@@ -294,11 +309,13 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
     }
 
     try {
-      final credential = EmailAuthProvider.credential(
-        email: user.email!,
-        password: _senhaController.text,
-      );
-      await user.reauthenticateWithCredential(credential);
+      if (!widget.isAnonimo) {
+        final credential = EmailAuthProvider.credential(
+          email: user.email!,
+          password: _senhaController.text,
+        );
+        await user.reauthenticateWithCredential(credential);
+      }
 
       await _excluirTodosOsDados(user.uid);
 
@@ -348,23 +365,26 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Isso apaga permanentemente sua conta e todos os dados dos '
               'seus pets (vacinas, medicamentos, sintomas e linha do '
-              'tempo). Essa ação não pode ser desfeita.',
+              'tempo). Essa ação não pode ser desfeita.'
+              '${widget.isAnonimo ? ' Como é uma conta em Modo Anônimo, não há como recuperá-la depois.' : ''}',
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _senhaController,
-              obscureText: true,
-              enabled: !_processando,
-              decoration: const InputDecoration(
-                labelText: 'Confirme sua senha',
+            if (!widget.isAnonimo) ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _senhaController,
+                obscureText: true,
+                enabled: !_processando,
+                decoration: const InputDecoration(
+                  labelText: 'Confirme sua senha',
+                ),
+                validator: (value) => (value == null || value.isEmpty)
+                    ? 'Digite sua senha para confirmar'
+                    : null,
               ),
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Digite sua senha para confirmar'
-                  : null,
-            ),
+            ],
             if (_erro != null) ...[
               const SizedBox(height: 12),
               Text(

@@ -36,6 +36,7 @@ void main() {
     expect(find.text('esqueceu a senha'), findsOneWidget);
     expect(find.text('não tenho conta'), findsOneWidget);
     expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Continuar sem conta (Modo Anônimo)'), findsOneWidget);
   });
 
   testWidgets('LoginScreen shows validation message when fields are empty', (
@@ -48,6 +49,21 @@ void main() {
 
     expect(find.text('Preencha e-mail e senha.'), findsOneWidget);
   });
+
+  testWidgets(
+    'Tapping "Continuar sem conta" without Firebase shows an error',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+
+      await tester.tap(find.text('Continuar sem conta (Modo Anônimo)'));
+      await tester.pump();
+
+      expect(
+        find.text('Não foi possível entrar em modo anônimo. Tente novamente.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('Tapping "esqueceu a senha" opens ForgotPasswordScreen', (
     WidgetTester tester,

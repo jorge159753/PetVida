@@ -87,6 +87,21 @@ class _LoginScreenState extends State<LoginScreen> {
     ).push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
   }
 
+  Future<void> _handleEntrarComoVisitante() async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.signInAnonymously();
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } catch (_) {
+      _showSnackBar('Não foi possível entrar em modo anônimo. Tente novamente.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
@@ -193,6 +208,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : _handleEntrarComoVisitante,
+                          child: const Text(
+                            'Continuar sem conta (Modo Anônimo)',
+                            style: TextStyle(
+                              color: AppColors.laranjaTerracota,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const Spacer(flex: 4),
