@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../theme/app_colors.dart';
+import '../utils/reminder_status.dart';
 import '../widgets/paw_prints_background.dart';
 import '../widgets/petvida_logo.dart';
+import '../widgets/reminder_badge.dart';
 import 'clinics_screen.dart';
 import 'historico_medico_screen.dart';
 import 'medicamentos_screen.dart';
@@ -71,9 +73,21 @@ class PetProfileScreen extends StatelessWidget {
     if (dados == null) return;
 
     try {
+      final numeroDoses = dados['numeroDoses'] as int;
+      final frequenciaDias = dados['frequenciaDias'] as int;
+      final dataAplicacao = dados['dataAplicacao'] as Timestamp;
+      final proximaDose = numeroDoses > 1
+          ? Timestamp.fromDate(
+              dataAplicacao.toDate().add(Duration(days: frequenciaDias)),
+            )
+          : null;
       await collection.add({
         'nome': dados['nome'],
-        'dataAplicacao': dados['dataAplicacao'],
+        'dataAplicacao': dataAplicacao,
+        'frequenciaDias': frequenciaDias,
+        'numeroDoses': numeroDoses,
+        'doseAtual': 1,
+        'proximaDose': proximaDose,
         'createdAt': FieldValue.serverTimestamp(),
       });
       if (context.mounted) {
@@ -82,6 +96,36 @@ class PetProfileScreen extends StatelessWidget {
     } catch (_) {
       if (context.mounted) {
         _showSnackBar(context, 'Não foi possível adicionar a vacina.');
+      }
+    }
+  }
+
+  Future<void> _handleRegistrarProximaDose(
+    BuildContext context,
+    DocumentReference<Map<String, dynamic>> doc,
+    Map<String, dynamic> data,
+  ) async {
+    final numeroDoses = (data['numeroDoses'] as num?)?.toInt() ?? 1;
+    final frequenciaDias = (data['frequenciaDias'] as num?)?.toInt() ?? 0;
+    final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
+    final novaDose = doseAtual + 1;
+    final agora = DateTime.now();
+    final proximaDose = novaDose < numeroDoses
+        ? Timestamp.fromDate(agora.add(Duration(days: frequenciaDias)))
+        : null;
+
+    try {
+      await doc.update({
+        'doseAtual': novaDose,
+        'dataAplicacao': Timestamp.fromDate(agora),
+        'proximaDose': proximaDose,
+      });
+      if (context.mounted) {
+        _showSnackBar(context, 'Dose registrada com sucesso!');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível registrar a dose.');
       }
     }
   }
@@ -247,7 +291,15 @@ class PetProfileScreen extends StatelessWidget {
                               .snapshots(),
                           builder: (context, snapshot) {
                             final docs = snapshot.data?.docs ?? [];
-                            return _VaccinesSection(docs: docs);
+                            return _VaccinesSection(
+                              docs: docs,
+                              onRegistrarDose: (doc, data) =>
+                                  _handleRegistrarProximaDose(
+                                    context,
+                                    doc,
+                                    data,
+                                  ),
+                            );
                           },
                         ),
                       ],
@@ -390,9 +442,14 @@ String _formatarData(DateTime data) {
 }
 
 class _VaccinesSection extends StatelessWidget {
-  const _VaccinesSection({required this.docs});
+  const _VaccinesSection({required this.docs, required this.onRegistrarDose});
 
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+  final void Function(
+    DocumentReference<Map<String, dynamic>> doc,
+    Map<String, dynamic> data,
+  )
+  onRegistrarDose;
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +472,10 @@ class _VaccinesSection extends StatelessWidget {
           )
         else
           for (final doc in docs) ...[
-            _VaccineTile(data: doc.data()),
+            _VaccineTile(
+              data: doc.data(),
+              onRegistrarDose: () => onRegistrarDose(doc.reference, doc.data()),
+            ),
             const SizedBox(height: 12),
           ],
       ],
@@ -424,9 +484,10 @@ class _VaccinesSection extends StatelessWidget {
 }
 
 class _VaccineTile extends StatelessWidget {
-  const _VaccineTile({required this.data});
+  const _VaccineTile({required this.data, required this.onRegistrarDose});
 
   final Map<String, dynamic> data;
+  final VoidCallback onRegistrarDose;
 
   @override
   Widget build(BuildContext context) {
@@ -435,6 +496,11 @@ class _VaccineTile extends StatelessWidget {
     final dataTexto = timestamp == null
         ? 'Data não informada'
         : _formatarData(timestamp.toDate());
+    final numeroDoses = (data['numeroDoses'] as num?)?.toInt() ?? 1;
+    final doseAtual = (data['doseAtual'] as num?)?.toInt() ?? 1;
+    final proximaDoseTimestamp = data['proximaDose'] as Timestamp?;
+    final protocoloCompleto = proximaDoseTimestamp == null;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -448,22 +514,71 @@ class _VaccineTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.vaccines, color: AppColors.laranjaTerracota),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            children: [
+              const Icon(Icons.vaccines, color: AppColors.laranjaTerracota),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nome,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Aplicada em $dataTexto · Dose $doseAtual de $numeroDoses',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (protocoloCompleto)
+            const ReminderBadge(
+              text: 'Protocolo completo',
+              color: Colors.green,
+            )
+          else ...[
+            Row(
               children: [
-                Text(nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  'Aplicada em $dataTexto',
-                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                Expanded(
+                  child: Text(
+                    'Próxima dose: ${_formatarData(proximaDoseTimestamp.toDate())}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                ReminderBadge(
+                  text: reminderLabel(
+                    calcularReminderStatus(proximaDoseTimestamp.toDate()),
+                  ),
+                  color: reminderColor(
+                    calcularReminderStatus(proximaDoseTimestamp.toDate()),
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onRegistrarDose,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.laranjaTerracota,
+                  side: const BorderSide(color: AppColors.laranjaTerracota),
+                ),
+                child: const Text('Registrar dose aplicada'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -669,11 +784,15 @@ class _AddVaccineDialog extends StatefulWidget {
 class _AddVaccineDialogState extends State<_AddVaccineDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
+  final _frequenciaController = TextEditingController(text: '365');
+  final _numeroDosesController = TextEditingController(text: '1');
   DateTime _dataAplicacao = DateTime.now();
 
   @override
   void dispose() {
     _nomeController.dispose();
+    _frequenciaController.dispose();
+    _numeroDosesController.dispose();
     super.dispose();
   }
 
@@ -694,6 +813,8 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
     Navigator.of(context).pop({
       'nome': _nomeController.text.trim(),
       'dataAplicacao': Timestamp.fromDate(_dataAplicacao),
+      'frequenciaDias': int.parse(_frequenciaController.text.trim()),
+      'numeroDoses': int.parse(_numeroDosesController.text.trim()),
     });
   }
 
@@ -732,6 +853,36 @@ class _AddVaccineDialogState extends State<_AddVaccineDialog> {
                 color: AppColors.laranjaTerracota,
               ),
               onTap: _escolherData,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _numeroDosesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Número de doses',
+              ),
+              validator: (value) {
+                final numero = int.tryParse((value ?? '').trim());
+                if (numero == null || numero < 1) {
+                  return 'Digite um número de doses válido';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _frequenciaController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Frequência entre doses (dias)',
+              ),
+              validator: (value) {
+                final numero = int.tryParse((value ?? '').trim());
+                if (numero == null || numero < 1) {
+                  return 'Digite uma frequência válida em dias';
+                }
+                return null;
+              },
             ),
           ],
         ),

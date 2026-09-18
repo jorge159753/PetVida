@@ -4,8 +4,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../utils/reminder_status.dart';
 import '../widgets/paw_prints_background.dart';
 import '../widgets/petvida_logo.dart';
+import '../widgets/reminder_badge.dart';
 
 /// Medicamentos atuais de um pet (users/{uid}/pets/{petId}/medicamentos).
 class MedicamentosScreen extends StatelessWidget {
@@ -43,17 +45,23 @@ class MedicamentosScreen extends StatelessWidget {
       return;
     }
 
-    final dados = await showDialog<Map<String, String>>(
+    final dados = await showDialog<Map<String, Object>>(
       context: context,
       builder: (_) => const _MedicamentoDialog(),
     );
     if (dados == null) return;
 
     try {
+      final frequenciaHoras = dados['frequenciaHoras'] as int;
+      final agora = DateTime.now();
       await collection.add({
         'nome': dados['nome'],
         'dosagem': dados['dosagem'],
-        'frequencia': dados['frequencia'],
+        'frequenciaHoras': frequenciaHoras,
+        'ultimaDose': Timestamp.fromDate(agora),
+        'proximaDose': Timestamp.fromDate(
+          agora.add(Duration(hours: frequenciaHoras)),
+        ),
         'createdAt': FieldValue.serverTimestamp(),
       });
       if (context.mounted) {
@@ -62,6 +70,30 @@ class MedicamentosScreen extends StatelessWidget {
     } catch (_) {
       if (context.mounted) {
         _showSnackBar(context, 'Não foi possível adicionar o medicamento.');
+      }
+    }
+  }
+
+  Future<void> _handleRegistrarDose(
+    BuildContext context,
+    DocumentReference<Map<String, dynamic>> doc,
+    Map<String, dynamic> data,
+  ) async {
+    final frequenciaHoras = (data['frequenciaHoras'] as num?)?.toInt() ?? 0;
+    final agora = DateTime.now();
+    try {
+      await doc.update({
+        'ultimaDose': Timestamp.fromDate(agora),
+        'proximaDose': Timestamp.fromDate(
+          agora.add(Duration(hours: frequenciaHoras)),
+        ),
+      });
+      if (context.mounted) {
+        _showSnackBar(context, 'Dose registrada com sucesso!');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showSnackBar(context, 'Não foi possível registrar a dose.');
       }
     }
   }
@@ -192,6 +224,12 @@ class MedicamentosScreen extends StatelessWidget {
                                     data: doc.data(),
                                     onExcluir: () =>
                                         _handleExcluir(context, doc.reference),
+                                    onRegistrarDose: () =>
+                                        _handleRegistrarDose(
+                                          context,
+                                          doc.reference,
+                                          doc.data(),
+                                        ),
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -231,16 +269,22 @@ class MedicamentosScreen extends StatelessWidget {
 }
 
 class _MedicamentoTile extends StatelessWidget {
-  const _MedicamentoTile({required this.data, required this.onExcluir});
+  const _MedicamentoTile({
+    required this.data,
+    required this.onExcluir,
+    required this.onRegistrarDose,
+  });
 
   final Map<String, dynamic> data;
   final VoidCallback onExcluir;
+  final VoidCallback onRegistrarDose;
 
   @override
   Widget build(BuildContext context) {
     final nome = (data['nome'] as String?) ?? 'Medicamento';
     final dosagem = (data['dosagem'] as String?) ?? '';
-    final frequencia = (data['frequencia'] as String?) ?? '';
+    final frequenciaHoras = (data['frequenciaHoras'] as num?)?.toInt();
+    final proximaDoseTimestamp = data['proximaDose'] as Timestamp?;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -254,33 +298,80 @@ class _MedicamentoTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.medication, color: AppColors.laranjaTerracota),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.medication, color: AppColors.laranjaTerracota),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nome,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    if (dosagem.isNotEmpty)
+                      Text(
+                        'Dosagem: $dosagem',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    if (frequenciaHoras != null)
+                      Text(
+                        'Frequência: a cada $frequenciaHoras h',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onExcluir,
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
+            ],
+          ),
+          if (proximaDoseTimestamp != null) ...[
+            const SizedBox(height: 8),
+            Row(
               children: [
-                Text(nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                if (dosagem.isNotEmpty)
-                  Text(
-                    'Dosagem: $dosagem',
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                Expanded(
+                  child: Text(
+                    'Próxima dose: ${formatarDataHora(proximaDoseTimestamp.toDate())}',
+                    style: const TextStyle(fontSize: 13),
                   ),
-                if (frequencia.isNotEmpty)
-                  Text(
-                    'Frequência: $frequencia',
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+                ReminderBadge(
+                  text: reminderLabel(
+                    calcularReminderStatus(proximaDoseTimestamp.toDate()),
                   ),
+                  color: reminderColor(
+                    calcularReminderStatus(proximaDoseTimestamp.toDate()),
+                  ),
+                ),
               ],
             ),
-          ),
-          IconButton(
-            onPressed: onExcluir,
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-          ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onRegistrarDose,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.laranjaTerracota,
+                  side: const BorderSide(color: AppColors.laranjaTerracota),
+                ),
+                child: const Text('Registrar dose administrada'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -298,7 +389,7 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
   final _dosagemController = TextEditingController();
-  final _frequenciaController = TextEditingController();
+  final _frequenciaController = TextEditingController(text: '12');
 
   @override
   void dispose() {
@@ -313,7 +404,7 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
     Navigator.of(context).pop({
       'nome': _nomeController.text.trim(),
       'dosagem': _dosagemController.text.trim(),
-      'frequencia': _frequenciaController.text.trim(),
+      'frequenciaHoras': int.parse(_frequenciaController.text.trim()),
     });
   }
 
@@ -350,9 +441,17 @@ class _MedicamentoDialogState extends State<_MedicamentoDialog> {
             ),
             TextFormField(
               controller: _frequenciaController,
+              keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Frequência (ex: a cada 12h)',
+                labelText: 'Frequência entre doses (horas)',
               ),
+              validator: (value) {
+                final numero = int.tryParse((value ?? '').trim());
+                if (numero == null || numero < 1) {
+                  return 'Digite uma frequência válida em horas';
+                }
+                return null;
+              },
             ),
           ],
         ),
