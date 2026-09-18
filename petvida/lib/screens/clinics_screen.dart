@@ -149,7 +149,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
     }
 
     final query =
-        '[out:json][timeout:25];'
+        '[out:json][timeout:10];'
         '('
         'node["amenity"="veterinary"](around:8000,$lat,$lng);'
         'way["amenity"="veterinary"](around:8000,$lat,$lng);'
@@ -163,7 +163,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
       try {
         final resposta = await http
             .post(Uri.parse(endpoint), body: {'data': query})
-            .timeout(const Duration(seconds: 25));
+            .timeout(const Duration(seconds: 8));
 
         if (resposta.statusCode != 200) {
           throw Exception('$endpoint respondeu ${resposta.statusCode}');
@@ -225,10 +225,14 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
 
     debugPrint('Falha ao buscar clínicas na Overpass API: $ultimoErro');
     if (mounted) {
+      final semSinal = ultimoErro is TimeoutException;
       setState(() {
-        _clinicsError =
-            'Não foi possível buscar clínicas próximas. '
-            'Verifique sua conexão com a internet e tente novamente.';
+        _clinicsError = semSinal
+            ? 'Não foi possível buscar clínicas próximas. Essa rede pode '
+                  'estar bloqueando o acesso (comum em Wi-Fi de faculdade/'
+                  'empresa) — tente com dados móveis ou outra rede.'
+            : 'Não foi possível buscar clínicas próximas. '
+                  'Verifique sua conexão com a internet e tente novamente.';
         _loadingClinics = false;
       });
     }
