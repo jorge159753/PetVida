@@ -73,6 +73,7 @@ class HomeScreen extends StatelessWidget {
                             nome: pet.nome,
                             especie: pet.especie,
                             idade: pet.idade,
+                            peso: pet.peso,
                             badges: const ['Cadastro Completo'],
                           ),
                         ),
@@ -139,6 +140,7 @@ class _Pet {
     this.id,
     this.especie = 'Não informado',
     this.idade = 'Idade não informada',
+    this.peso = 'Peso não informado',
     this.fotoBase64,
   });
 
@@ -147,6 +149,7 @@ class _Pet {
     final nome = (data['nome'] as String?)?.trim();
     final especie = (data['especie'] as String?)?.trim();
     final idade = (data['idade'] as String?)?.trim();
+    final peso = (data['peso'] as String?)?.trim();
     return _Pet(
       (nome == null || nome.isEmpty) ? 'Sem nome' : nome,
       'Sem Vacinas',
@@ -154,6 +157,7 @@ class _Pet {
       id: doc.id,
       especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
       idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
+      peso: (peso == null || peso.isEmpty) ? 'Peso não informado' : peso,
       fotoBase64: data['fotoBase64'] as String?,
     );
   }
@@ -164,6 +168,7 @@ class _Pet {
   final bool statusOk;
   final String especie;
   final String idade;
+  final String peso;
   final String? fotoBase64;
 
   ImageProvider? get fotoProvider {

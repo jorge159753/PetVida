@@ -30,6 +30,7 @@ class PetProfileScreen extends StatelessWidget {
     this.nome = 'Fofo',
     this.especie = 'Gato',
     this.idade = '2 anos',
+    this.peso = '4,5 kg',
     this.badges = const ['Vacina OK', 'Peso Ideal', 'Check-up em Dia'],
   });
 
@@ -37,6 +38,7 @@ class PetProfileScreen extends StatelessWidget {
   final String nome;
   final String especie;
   final String idade;
+  final String peso;
   final List<String> badges;
 
   DocumentReference<Map<String, dynamic>>? get _petDocument {
@@ -205,6 +207,7 @@ class PetProfileScreen extends StatelessWidget {
         nomeInicial: (dadosAtuais?['nome'] as String?) ?? nome,
         especieInicial: (dadosAtuais?['especie'] as String?) ?? especie,
         idadeInicial: (dadosAtuais?['idade'] as String?) ?? idade,
+        pesoInicial: (dadosAtuais?['peso'] as String?) ?? peso,
         fotoBase64Inicial: dadosAtuais?['fotoBase64'] as String?,
       ),
     );
@@ -303,6 +306,7 @@ class PetProfileScreen extends StatelessWidget {
                     nome: nome,
                     especie: especie,
                     idade: idade,
+                    peso: peso,
                     badges: badges,
                     fotoBase64: null,
                     onEditar: null,
@@ -317,6 +321,7 @@ class PetProfileScreen extends StatelessWidget {
                         nome: (dados?['nome'] as String?) ?? nome,
                         especie: (dados?['especie'] as String?) ?? especie,
                         idade: (dados?['idade'] as String?) ?? idade,
+                        peso: (dados?['peso'] as String?) ?? peso,
                         badges: badges,
                         fotoBase64: dados?['fotoBase64'] as String?,
                         onEditar: () => _handleEditar(context, dados),
@@ -638,6 +643,7 @@ class _PetHeader extends StatelessWidget {
     required this.nome,
     required this.especie,
     required this.idade,
+    required this.peso,
     required this.badges,
     required this.fotoBase64,
     required this.onEditar,
@@ -647,6 +653,7 @@ class _PetHeader extends StatelessWidget {
   final String nome;
   final String especie;
   final String idade;
+  final String peso;
   final List<String> badges;
   final String? fotoBase64;
   final VoidCallback? onEditar;
@@ -760,6 +767,13 @@ class _PetHeader extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '$especie / Idade: $idade',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Colors.black87),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Peso: $peso',
+            textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 16, color: Colors.black87),
           ),
         ],
@@ -1078,12 +1092,14 @@ class _EditPetDialog extends StatefulWidget {
     required this.nomeInicial,
     required this.especieInicial,
     required this.idadeInicial,
+    required this.pesoInicial,
     required this.fotoBase64Inicial,
   });
 
   final String nomeInicial;
   final String especieInicial;
   final String idadeInicial;
+  final String pesoInicial;
   final String? fotoBase64Inicial;
 
   @override
@@ -1099,6 +1115,7 @@ class _EditPetDialogState extends State<_EditPetDialog> {
   late final _idadeController = TextEditingController(
     text: widget.idadeInicial,
   );
+  late final _pesoController = TextEditingController(text: widget.pesoInicial);
   String? _fotoBase64;
   bool _fotoAlterada = false;
 
@@ -1113,6 +1130,7 @@ class _EditPetDialogState extends State<_EditPetDialog> {
     _nomeController.dispose();
     _especieController.dispose();
     _idadeController.dispose();
+    _pesoController.dispose();
     super.dispose();
   }
 
@@ -1131,6 +1149,7 @@ class _EditPetDialogState extends State<_EditPetDialog> {
       'nome': _nomeController.text.trim(),
       'especie': _especieController.text.trim(),
       'idade': _idadeController.text.trim(),
+      'peso': _pesoController.text.trim(),
     };
     if (_fotoAlterada) {
       resultado['fotoBase64'] = _fotoBase64;
@@ -1218,6 +1237,12 @@ class _EditPetDialogState extends State<_EditPetDialog> {
                 controller: _idadeController,
                 decoration: const InputDecoration(
                   labelText: 'Idade (ex: 2 anos)',
+                ),
+              ),
+              TextFormField(
+                controller: _pesoController,
+                decoration: const InputDecoration(
+                  labelText: 'Peso (ex: 4,5 kg)',
                 ),
               ),
             ],

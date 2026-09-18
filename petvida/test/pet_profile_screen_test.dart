@@ -13,6 +13,7 @@ void main() {
     expect(find.byType(PetVidaLogo), findsOneWidget);
     expect(find.text('Fofo'), findsOneWidget);
     expect(find.text('Gato / Idade: 2 anos'), findsOneWidget);
+    expect(find.text('Peso: 4,5 kg'), findsOneWidget);
     expect(find.text('Vacina OK'), findsOneWidget);
     expect(find.text('Peso Ideal'), findsOneWidget);
     expect(find.text('Check-up em Dia'), findsOneWidget);
@@ -32,6 +33,7 @@ void main() {
           nome: 'Mago',
           especie: 'Cão',
           idade: '4 anos',
+          peso: '18 kg',
           badges: ['Vacina OK'],
         ),
       ),
@@ -39,6 +41,7 @@ void main() {
 
     expect(find.text('Mago'), findsOneWidget);
     expect(find.text('Cão / Idade: 4 anos'), findsOneWidget);
+    expect(find.text('Peso: 18 kg'), findsOneWidget);
     expect(find.text('Vacina OK'), findsOneWidget);
   });
 

@@ -45,6 +45,7 @@ class MeusPetsScreen extends StatelessWidget {
           nome: pet.nome,
           especie: pet.especie,
           idade: pet.idade,
+          peso: pet.peso,
           badges: pet.badgesPerfil,
         ),
       ),
@@ -69,6 +70,7 @@ class MeusPetsScreen extends StatelessWidget {
         'nome': dados['nome'],
         'especie': dados['especie'],
         'idade': dados['idade'],
+        'peso': dados['peso'],
         'createdAt': FieldValue.serverTimestamp(),
       });
       if (context.mounted) {
@@ -145,6 +147,7 @@ class _Pet {
     required this.statusAlerta,
     required this.especie,
     required this.idade,
+    required this.peso,
     required this.badgesPerfil,
     this.fotoBase64,
   });
@@ -154,6 +157,7 @@ class _Pet {
     final nome = (data['nome'] as String?)?.trim();
     final especie = (data['especie'] as String?)?.trim();
     final idade = (data['idade'] as String?)?.trim();
+    final peso = (data['peso'] as String?)?.trim();
     return _Pet(
       id: doc.id,
       nome: (nome == null || nome.isEmpty) ? 'Sem nome' : nome,
@@ -164,6 +168,7 @@ class _Pet {
       statusAlerta: 'Sem Vacinas',
       especie: (especie == null || especie.isEmpty) ? 'Não informado' : especie,
       idade: (idade == null || idade.isEmpty) ? 'Idade não informada' : idade,
+      peso: (peso == null || peso.isEmpty) ? 'Peso não informado' : peso,
       badgesPerfil: const ['Cadastro Completo'],
       fotoBase64: data['fotoBase64'] as String?,
     );
@@ -176,6 +181,7 @@ class _Pet {
   final String statusAlerta;
   final String especie;
   final String idade;
+  final String peso;
   final List<String> badgesPerfil;
   final String? fotoBase64;
 
@@ -198,6 +204,7 @@ const _mockPets = [
     statusAlerta: 'Próxima Vacina',
     especie: 'Gato',
     idade: '2 anos',
+    peso: '4,5 kg',
     badgesPerfil: ['Vacina OK', 'Peso Ideal', 'Check-up em Dia'],
   ),
   _Pet(
@@ -207,6 +214,7 @@ const _mockPets = [
     statusAlerta: 'Próxima Vacina',
     especie: 'Cão',
     idade: '4 anos',
+    peso: '18 kg',
     badgesPerfil: ['Vacina OK', 'Peso Ideal', 'Check-up em Dia'],
   ),
   _Pet(
@@ -216,6 +224,7 @@ const _mockPets = [
     statusAlerta: 'Falta Diário',
     especie: 'Gato',
     idade: '1 ano',
+    peso: '3,8 kg',
     badgesPerfil: ['Vacina OK', 'Peso Ideal', 'Check-up em Dia'],
   ),
   _Pet(
@@ -225,6 +234,7 @@ const _mockPets = [
     statusAlerta: 'Falta Diário',
     especie: 'Cão',
     idade: '3 anos',
+    peso: '12 kg',
     badgesPerfil: ['Vacina OK', 'Peso Ideal', 'Check-up em Dia'],
   ),
 ];
@@ -450,12 +460,14 @@ class _AddPetDialogState extends State<_AddPetDialog> {
   final _nomeController = TextEditingController();
   final _especieController = TextEditingController();
   final _idadeController = TextEditingController();
+  final _pesoController = TextEditingController();
 
   @override
   void dispose() {
     _nomeController.dispose();
     _especieController.dispose();
     _idadeController.dispose();
+    _pesoController.dispose();
     super.dispose();
   }
 
@@ -465,6 +477,7 @@ class _AddPetDialogState extends State<_AddPetDialog> {
       'nome': _nomeController.text.trim(),
       'especie': _especieController.text.trim(),
       'idade': _idadeController.text.trim(),
+      'peso': _pesoController.text.trim(),
     });
   }
 
@@ -504,6 +517,12 @@ class _AddPetDialogState extends State<_AddPetDialog> {
               controller: _idadeController,
               decoration: const InputDecoration(
                 labelText: 'Idade (ex: 2 anos)',
+              ),
+            ),
+            TextFormField(
+              controller: _pesoController,
+              decoration: const InputDecoration(
+                labelText: 'Peso (ex: 4,5 kg)',
               ),
             ),
           ],
