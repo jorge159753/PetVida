@@ -59,6 +59,50 @@ void main() {
     expect(find.text('Nenhum resultado encontrado.'), findsOneWidget);
   });
 
+  testWidgets(
+    'Shows the category filter chips (RF08): Clínicas, CCZ, Vacinação Gratuita, Castração',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
+      await tester.pump();
+
+      expect(find.widgetWithText(FilterChip, 'Clínicas'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'CCZ'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilterChip, 'Vacinação Gratuita'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilterChip, 'Castração'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Deselecting the "Vacinação Gratuita" category hides that campaign only',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Vacinação Gratuita'));
+      await tester.pump();
+
+      expect(find.text('Vacinação Antirrábica 2026'), findsNothing);
+      expect(find.text('Mutirão de Castração'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Deselecting the "Castração" category hides that campaign only',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: ClinicsScreen()));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Castração'));
+      await tester.pump();
+
+      expect(find.text('Mutirão de Castração'), findsNothing);
+      expect(find.text('Vacinação Antirrábica 2026'), findsOneWidget);
+    },
+  );
+
   testWidgets('Tapping "Saiba Mais" opens a dialog with full campaign info', (
     WidgetTester tester,
   ) async {

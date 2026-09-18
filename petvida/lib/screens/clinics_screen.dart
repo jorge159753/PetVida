@@ -27,6 +27,21 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   final _mapController = MapController();
   String _query = '';
 
+  /// Categorias ativas no filtro (RF08). Todas começam ativas — desmarcar
+  /// uma esconde seus pontos tanto da lista quanto do mapa.
+  Set<_Categoria> _categoriasAtivas = _Categoria.values.toSet();
+
+  void _toggleCategoria(_Categoria categoria) {
+    setState(() {
+      if (_categoriasAtivas.contains(categoria)) {
+        _categoriasAtivas = {..._categoriasAtivas}..remove(categoria);
+      } else {
+        _categoriasAtivas = {..._categoriasAtivas, categoria};
+      }
+    });
+    _atualizarCameraDoMapa();
+  }
+
   /// Clínicas veterinárias reais próximas do usuário, buscadas na Overpass
   /// API (OpenStreetMap) a partir da localização atual. Não há mais dados
   /// fixos/mocados de São Paulo.
@@ -270,6 +285,10 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
               'Telefone não informado',
           lat: clinicLat,
           lng: clinicLng,
+          categoria: _categoriaDaClinica(
+            nome: nome,
+            operatorType: extratags['operator:type'] as String?,
+          ),
         ),
       );
     }
@@ -324,9 +343,10 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
         ?bairro,
       ];
 
+      final nomeClinica = (tags['name'] as String?) ?? 'Clínica Veterinária';
       clinicas.add(
         _Clinic(
-          nome: (tags['name'] as String?) ?? 'Clínica Veterinária',
+          nome: nomeClinica,
           endereco: partesEndereco.isEmpty
               ? 'Endereço não informado'
               : partesEndereco.join(' - '),
@@ -336,6 +356,10 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
               'Telefone não informado',
           lat: clinicLat,
           lng: clinicLng,
+          categoria: _categoriaDaClinica(
+            nome: nomeClinica,
+            operatorType: tags['operator:type'] as String?,
+          ),
         ),
       );
     }
@@ -395,6 +419,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
           'qualquer ponto de apoio, sem necessidade de agendamento.',
       periodo: '15/03/2026 - 30/04/2026',
       icon: Icons.vaccines,
+      categoria: _Categoria.vacinacao,
     ),
     _Campaign(
       titulo: 'Mutirão de Castração',
@@ -404,6 +429,7 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
           'próxima.',
       periodo: '01/05/2026 - 31/05/2026',
       icon: Icons.medical_services,
+      categoria: _Categoria.castracao,
     ),
   ];
 
@@ -483,11 +509,14 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   }
 
   List<_Clinic> get _filteredClinics {
-    final filtradas = _query.isEmpty
-        ? List<_Clinic>.from(_clinics)
-        : _clinics
-              .where((c) => c.nome.toLowerCase().contains(_query.toLowerCase()))
-              .toList();
+    final filtradas = _clinics
+        .where((c) => _categoriasAtivas.contains(c.categoria))
+        .where(
+          (c) =>
+              _query.isEmpty ||
+              c.nome.toLowerCase().contains(_query.toLowerCase()),
+        )
+        .toList();
     if (_userLocation != null) {
       filtradas.sort(
         (a, b) => (_distanciaEmKm(a) ?? double.infinity).compareTo(
@@ -499,9 +528,13 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
   }
 
   List<_Campaign> get _filteredCampaigns {
-    if (_query.isEmpty) return _campaigns;
     return _campaigns
-        .where((c) => c.titulo.toLowerCase().contains(_query.toLowerCase()))
+        .where((c) => _categoriasAtivas.contains(c.categoria))
+        .where(
+          (c) =>
+              _query.isEmpty ||
+              c.titulo.toLowerCase().contains(_query.toLowerCase()),
+        )
         .toList();
   }
 
@@ -572,6 +605,38 @@ class _ClinicsScreenState extends State<ClinicsScreen> {
                               width: 2,
                             ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _Categoria.values.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final categoria = _Categoria.values[index];
+                            final ativa = _categoriasAtivas.contains(
+                              categoria,
+                            );
+                            return FilterChip(
+                              label: Text(categoria.label),
+                              selected: ativa,
+                              onSelected: (_) => _toggleCategoria(categoria),
+                              selectedColor: AppColors.laranjaTerracota,
+                              checkmarkColor: Colors.white,
+                              backgroundColor: Colors.white,
+                              labelStyle: TextStyle(
+                                color: ativa
+                                    ? Colors.white
+                                    : AppColors.laranjaTerracota,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              side: const BorderSide(
+                                color: AppColors.laranjaSolar,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -738,6 +803,66 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Categorias de filtro do mapa (RF08): no mínimo CCZ, vacinação gratuita
+/// e castração, além de clínicas particulares comuns.
+enum _Categoria { clinica, ccz, vacinacao, castracao }
+
+extension on _Categoria {
+  String get label {
+    switch (this) {
+      case _Categoria.clinica:
+        return 'Clínicas';
+      case _Categoria.ccz:
+        return 'CCZ';
+      case _Categoria.vacinacao:
+        return 'Vacinação Gratuita';
+      case _Categoria.castracao:
+        return 'Castração';
+    }
+  }
+}
+
+/// Classifica uma clínica encontrada via Nominatim/Overpass como CCZ
+/// (serviço público) ou clínica particular comum, usando o nome e a tag
+/// OSM `operator:type` (quando disponível) — não há uma fonte confiável
+/// única para "é um CCZ" nos dados abertos do OpenStreetMap no Brasil.
+_Categoria _categoriaDaClinica({required String nome, String? operatorType}) {
+  final nomeLower = nome.toLowerCase();
+  final publico =
+      operatorType?.toLowerCase() == 'public' ||
+      nomeLower.contains('ccz') ||
+      nomeLower.contains('zoonose') ||
+      nomeLower.contains('centro de controle') ||
+      nomeLower.contains('prefeitura') ||
+      nomeLower.contains('municipal');
+  return publico ? _Categoria.ccz : _Categoria.clinica;
+}
+
+class _CategoriaBadge extends StatelessWidget {
+  const _CategoriaBadge({required this.categoria});
+
+  final _Categoria categoria;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.begePata,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        categoria.label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: AppColors.laranjaTerracota,
+        ),
+      ),
+    );
+  }
+}
+
 class _Clinic {
   const _Clinic({
     required this.nome,
@@ -745,6 +870,7 @@ class _Clinic {
     required this.telefone,
     required this.lat,
     required this.lng,
+    required this.categoria,
   });
 
   final String nome;
@@ -752,6 +878,7 @@ class _Clinic {
   final String telefone;
   final double lat;
   final double lng;
+  final _Categoria categoria;
 }
 
 class _Campaign {
@@ -760,12 +887,14 @@ class _Campaign {
     required this.descricao,
     required this.periodo,
     required this.icon,
+    required this.categoria,
   });
 
   final String titulo;
   final String descricao;
   final String periodo;
   final IconData icon;
+  final _Categoria categoria;
 }
 
 class _RealMap extends StatelessWidget {
@@ -948,6 +1077,8 @@ class _ClinicCard extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  _CategoriaBadge(categoria: clinic.categoria),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1067,6 +1198,8 @@ class _CampaignCard extends StatelessWidget {
                     color: Colors.black87,
                   ),
                 ),
+                const SizedBox(height: 4),
+                _CategoriaBadge(categoria: campaign.categoria),
                 const SizedBox(height: 4),
                 Text(
                   campaign.descricao,
