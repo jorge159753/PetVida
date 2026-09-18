@@ -518,33 +518,21 @@ class _PetHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              SizedBox(width: onEditar != null ? 84 : 40, height: 40),
+              SizedBox(width: onEditar != null ? 36 : 0, height: 40),
               const Expanded(child: Center(child: PetVidaLogo(size: 64))),
-              Row(
-                children: [
-                  if (onEditar != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: onEditar,
-                        child: const CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: AppColors.laranjaTerracota,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const CircleAvatar(
-                    radius: 20,
+              if (onEditar != null)
+                GestureDetector(
+                  onTap: onEditar,
+                  child: const CircleAvatar(
+                    radius: 18,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: AppColors.laranjaSolar),
+                    child: Icon(
+                      Icons.edit,
+                      size: 18,
+                      color: AppColors.laranjaTerracota,
+                    ),
                   ),
-                ],
-              ),
+                ),
             ],
           ),
           const SizedBox(height: 20),

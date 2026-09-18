@@ -43,10 +43,7 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  nomeTutor: _nomeTutor,
-                  onPerfil: () => _abrirTela(context, const PerfilScreen()),
-                ),
+                _Header(nomeTutor: _nomeTutor),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -110,10 +107,9 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.nomeTutor, required this.onPerfil});
+  const _Header({required this.nomeTutor});
 
   final String nomeTutor;
-  final VoidCallback onPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -130,20 +126,7 @@ class _Header extends StatelessWidget {
           bottomRight: Radius.circular(32),
         ),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 40, height: 40),
-          const Expanded(child: Center(child: PetVidaLogo(size: 64))),
-          GestureDetector(
-            onTap: onPerfil,
-            child: const CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: AppColors.laranjaSolar),
-            ),
-          ),
-        ],
-      ),
+      child: const Center(child: PetVidaLogo(size: 64)),
     );
   }
 }

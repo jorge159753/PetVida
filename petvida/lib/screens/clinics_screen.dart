@@ -386,11 +386,7 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const Expanded(child: Center(child: PetVidaLogo(size: 64))),
-              const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: AppColors.laranjaSolar),
-              ),
+              const SizedBox(width: 36, height: 36),
             ],
           ),
           const SizedBox(height: 8),
