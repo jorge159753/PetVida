@@ -58,3 +58,31 @@
 - **Byron**: Análise de requisitos funcionais e funcionalidades
 - **Arthur Costa Ribeiro**: Mapeamento e análise do CRUD
 - **Heitor**: Análise de requisitos não funcionais e funcionalidades
+
+#--------------------------------------------------------------------------------------------------#
+# Atividade 4 - Prototipação.
+
+## Turma 
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição da atividade
+- A atividade de hoje teve como objetivo documentar a concepção e evolução da interface do sistema PetVida, apresentando a transição da ideia inicial em baixa fidelidade para a solução final em alta fidelidade, detalhando o fluxo principal do aplicativo, as principais decisões de UI/UX e a verificação do cumprimento dos requisitos definidos.
+
+## Responsabilidade de cada integrante nessa atividade
+**Jorge Vitor, João Murilo**: Confecção dos slides 
+**Jorge Vitor**: Criação do modelo de Baixa fidelidade (Miro)
+**Arthur Costa Ribeiro, Byron**: Criação do modelo de Alta fidelidade (Figma)
+
+#--------------------------------------------------------------------------------------------------#
+# Atividade 5 - Apresentação final.
+
+## Turma 
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição da atividade
+- Criação da apresentação final do projeto, mostrar toda a evolução dês do inicio até o Prototipo de Alta fidelidade.
+
+## Responsabilidade de cada integrante nessa atividade
+**João Murilo**: Confecção dos slides da apresentação final
