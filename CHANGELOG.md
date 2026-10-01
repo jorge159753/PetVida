@@ -11,4 +11,14 @@
 ## [17/09/2026]
 
 ### Adicionado
--  Funcionalidades E Requisitos 
+-  Funcionalidades E Requisitos.
+
+## [30/09/2026]
+
+### Adicionado
+-  Prototipação.
+
+## [01/10/2026]
+
+### Adicionado
+-  Apresentação e Entrega Final.
