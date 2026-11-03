@@ -22,3 +22,8 @@
 
 ### Adicionado
 -  Apresentação e Entrega Final.
+
+## [02/11/2026]
+
+### Adicionado
+- Entrega Final do projeto.
