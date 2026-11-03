@@ -86,3 +86,17 @@
 
 ## Responsabilidade de cada integrante nessa atividade
 - **João Murilo**: Confecção dos slides da apresentação final
+
+#--------------------------------------------------------------------------------------------------#
+# Projeto Unidade II
+
+## Turma
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição da atividade
+- Finalização do projeto, diagramas e documentação.
+
+## Responsabilidade de cada integrante nessa atividade
+- **Byron**: Criação dos diagramas e desenvolvimento do código.
+- **Jorge**: Desenvolvimento do Código.
