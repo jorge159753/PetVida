@@ -2,7 +2,7 @@
 
 Versão revisada contra o código do protótipo (`lib/screens/*.dart`, `lib/services/*.dart`, `firestore.rules`). Incorpora as regras de negócio definidas após a revisão dos requisitos (lembrete automático, Porte no lugar de Raça, backup apenas via Wi-Fi, fluxo em 3 interações e exclusão definitiva de dados).
 
-> O diagrama usa Mermaid, que o GitHub renderiza direto no navegador. Mermaid não tem um tipo nativo de caso de uso, então a notação UML foi adaptada: **atores humanos** (Tutor e Visitante) são bonequinhos, os **atores externos** (Firebase, Android e Mapas) são círculos, **casos de uso** são elipses (cápsulas), a **fronteira do sistema** é o retângulo "PetVida", e as setas tracejadas indicam `«include»` e `«extend»`. Os nomes de classes citados são os mesmos de [`diagrama-de-classes.md`](diagrama-de-classes.md).
+> O diagrama usa Mermaid, que o GitHub renderiza direto no navegador. Mermaid não tem um tipo nativo de caso de uso, então a notação UML foi adaptada: **atores humanos** (Tutor e Visitante) são bonequinhos (imagem [`imagens/ator.svg`](imagens/ator.svg)), os **atores externos** (Firebase, Android e Mapas) são círculos, **casos de uso** são elipses (cápsulas), a **fronteira do sistema** é o retângulo "PetVida", e as setas tracejadas indicam `«include»` e `«extend»`. Os nomes de classes citados são os mesmos de [`diagrama-de-classes.md`](diagrama-de-classes.md).
 
 ---
 
@@ -22,8 +22,8 @@ Versão revisada contra o código do protótipo (`lib/screens/*.dart`, `lib/serv
 
 ```mermaid
 flowchart LR
-    Tutor["◯<br/>──┼──<br/>│<br/>╱ ╲<br/><b>Tutor</b>"]
-    Visitante["◯<br/>──┼──<br/>│<br/>╱ ╲<br/><b>Visitante</b><br/>(Modo Anônimo)"]
+    Tutor@{ img: "https://raw.githubusercontent.com/jorge159753/PetVida/main/docs/imagens/ator.svg", label: "Tutor", pos: "b", w: 60, h: 100, constraint: "on" }
+    Visitante@{ img: "https://raw.githubusercontent.com/jorge159753/PetVida/main/docs/imagens/ator.svg", label: "Visitante<br/>(Modo Anônimo)", pos: "b", w: 60, h: 100, constraint: "on" }
     Firebase(("☁️ Firebase"))
     Android(("🔔 Sistema<br/>Android"))
     Mapas(("🗺️ Serviço<br/>de Mapas"))
@@ -96,9 +96,6 @@ flowchart LR
     UC25 --- Firebase
     UC16 --- Android
     UC22 --- Mapas
-
-    classDef ator fill:transparent,stroke:transparent,font-size:16px
-    class Tutor,Visitante ator
 ```
 
 > **Leitura das setas:** `«include»` aponta para um passo que sempre acontece dentro do caso de uso de origem; `«extend»` aponta para um comportamento opcional, que o tutor aciona ou não. O porte (UC08) é `«extend»` porque o formulário mostra o seletor, mas não obriga a escolha. A foto (UC09) não faz parte do cadastro: ela é escolhida tocando na foto do perfil (UC10) ou no formulário de edição (UC11).
