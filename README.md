@@ -100,3 +100,16 @@
 ## Responsabilidade de cada integrante nessa atividade
 - **Byron**: Criação dos diagramas e desenvolvimento do código.
 - **Jorge**: Desenvolvimento do Código.
+
+#--------------------------------------------------------------------------------------------------#
+# Projeto Unidade II
+
+## Turma
+
+- PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS - GP0161NOT05A
+
+## Breve descrição da atividade
+- Construção do aplicativo em Flutter/dart.
+
+## Responsabilidade de cada integrante nessa atividade
+- **Jorge Vitor, João Murilo. Arthur Costa Ribeiro, Byron**: Desenvolvimento das telas e funções do aplicativo PetVida.
